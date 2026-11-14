@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#C97B84" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%23FBF7F2%27/%3E%3Cpath fill=%27%23C97B84%27 d=%27M32 50 L14 32 A11 11 0 0 1 32 20 A11 11 0 0 1 50 32 Z%27/%3E%3C/svg%3E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Moustapha, Maren &amp; Coco — Memory Vault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Nunito:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+
+    :root {
+      --cream: #FBF7F2;
+      --cream-deep: #F3EBE3;
+      --paper: #FFFCF9;
+      --blush: #F3D0D3;
+      --blush-mid: #E8B4B8;
+      --blush-deep: #C97B84;
+      --rose: #A85A64;
+      --lavender: #E4D8F0;
+      --lavender-mid: #C9B4DE;
+      --lavender-deep: #8E6EAE;
+      --sage: #D4E2D4;
+      --sage-mid: #B3C9B3;
+      --sage-deep: #6B8F71;
+      --gold: #C4A574;
+      --gold-soft: #E8D5B5;
+      --ink: #3A2A2C;
+      --ink-soft: #6E585B;
+      --ink-faint: #9A8688;
+      --line: rgba(58, 42, 44, 0.10);
+      --shadow: 0 10px 30px rgba(91, 54, 62, 0.08), 0 2px 8px rgba(91, 54, 62, 0.05);
+      --shadow-soft: 0 4px 16px rgba(91, 54, 62, 0.06);
+      --radius: 20px;
+      --radius-sm: 14px;
+      --nav-h: 72px;
+      --header-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+      --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    html, body { min-height: 100%; }
+    body {
+      font-family: var(--body);
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(228, 216, 240, 0.7), transparent 55%),
+        radial-gradient(900px 500px at 110% 8%, rgba(243, 208, 211, 0.75), transparent 50%),
+        radial-gradient(800px 500px at 50% 100%, rgba(212, 226, 212, 0.55), transparent 50%),
+        var(--cream);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: calc(var(--nav-h) + 20px + env(safe-area-inset-bottom));
+    }
+    img { max-width: 100%; display: block; }
+    button, input, textarea, select { font-family: inherit; color: inherit; }
+    button { cursor: pointer; }
+    h1, h2, h3, .serif { font-family: var(--header-serif); font-weight: 600; letter-spacing: -0.02em; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+    .site-header { text-align: center; padding: 28px 20px 10px; }
+    .site-kicker {
+      font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--rose); font-weight: 700; margin-bottom: 6px;
+    }
+    .site-title { font-size: clamp(1.85rem, 6vw, 3rem); line-height: 1.15; color: var(--ink); }
+    .site-sub { color: var(--ink-soft); margin-top: 6px; font-size: 0.98rem; }
+    .header-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .btn {
+      border: 0; background: var(--paper); color: var(--ink); border-radius: 999px;
+      padding: 9px 16px; font-size: 0.88rem; font-weight: 600;
+      box-shadow: var(--shadow-soft); transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn:active { transform: translateY(0); }
+    .btn:focus-visible { outline: 2px solid var(--blush-deep); outline-offset: 2px; }
+    .btn-primary { background: linear-gradient(180deg, #d88992, var(--blush-deep)); color: #fff; }
+    .btn-sage { background: linear-gradient(180deg, #8aa888, var(--sage-deep)); color: #fff; }
+    .btn-lavender { background: linear-gradient(180deg, #a88bc4, var(--lavender-deep)); color: #fff; }
+    .btn-ghost { background: transparent; box-shadow: none; border: 1px solid var(--line); }
+    .btn-danger { color: var(--rose); background: #fbecee; box-shadow: none; }
+    .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+    .btn[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; }
+    main { width: min(1080px, calc(100% - 28px)); margin: 0 auto; }
+    .section { display: none; animation: fadeUp .35s ease; padding: 8px 0 24px; }
+    .section.active { display: block; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .section-head {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 12px; flex-wrap: wrap; margin: 8px 0 16px;
+    }
+    .section-head h2 { font-size: clamp(1.7rem, 4vw, 2.2rem); }
+    .section-head p { color: var(--ink-soft); font-size: 0.92rem; max-width: 42ch; }
+    .card {
+      background: var(--paper); border-radius: var(--radius); box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.8); padding: 18px;
+    }
+    .card + .card { margin-top: 14px; }
+    .grid-2 { display: grid; gap: 14px; }
+    @media (min-width: 760px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+    label.fld { display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; font-weight: 700; color: var(--ink-soft); }
+    input[type="text"], input[type="date"], input[type="number"], input[type="url"], input[type="month"],
+    textarea, select {
+      width: 100%; border: 1px solid var(--line); background: #fff; border-radius: 12px;
+      padding: 10px 12px; font-size: 1rem; outline: none; transition: border-color .15s, box-shadow .15s;
+    }
+    textarea { min-height: 88px; resize: vertical; }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--blush-mid); box-shadow: 0 0 0 4px rgba(201, 123, 132, 0.18);
+    }
+    .form-row { display: grid; gap: 10px; margin-bottom: 10px; }
+    @media (min-width: 560px) {
+      .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+      .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    }
+    .form-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .app-nav {
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 40;
+      display: flex; gap: 2px;
+      background: #FFFCF9;
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--line); border-radius: 999px; padding: 6px;
+      box-shadow: var(--shadow); width: min(720px, calc(100% - 16px));
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .app-nav::-webkit-scrollbar { display: none; }
+    .app-nav button {
+      flex: 1 1 0; border: 0; background: transparent; border-radius: 999px;
+      padding: 8px 2px 6px; min-width: 0; color: var(--ink-soft);
+      font-size: 0.58rem; font-weight: 700; letter-spacing: 0;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      transition: background .15s, color .15s; white-space: nowrap;
+    }
+    .app-nav button .ico { font-size: 1.05rem; line-height: 1; }
+    .app-nav button.active { background: linear-gradient(180deg, #f6e4e6, #f3d0d3); color: var(--rose); }
+    @media (min-width: 860px) {
+      body { padding-bottom: 28px; }
+      .app-nav { top: 12px; bottom: auto; width: auto; }
+      .app-nav button { flex: 1 0 auto; padding: 8px 12px 6px; font-size: 0.68rem; letter-spacing: 0.01em; }
+      .site-header { padding-top: 88px; }
+    }
+
+    .hero-banner {
+      background: linear-gradient(135deg, #f8e4e6 0%, #eee4f6 55%, #e7f0e7 100%);
+      border-radius: 24px; padding: 22px 20px; box-shadow: var(--shadow);
+      position: relative; overflow: hidden; margin-bottom: 16px;
+    }
+    .hero-banner::after {
+      content: "♡"; position: absolute; right: 12px; bottom: -18px;
+      font-size: 8rem; color: rgba(201, 123, 132, 0.14);
+      font-family: var(--header-serif); pointer-events: none;
+    }
+    .hero-banner h2 { font-size: 2rem; margin-bottom: 4px; }
+    .celebrate {
+      display: none; margin-top: 12px; background: rgba(255,255,255,0.72);
+      border-radius: 16px; padding: 12px 14px; font-weight: 700; color: var(--rose);
+    }
+    .celebrate.show { display: block; animation: pulse 1.4s ease-in-out infinite alternate; }
+    @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.015); } }
+    .count-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    @media (min-width: 640px) { .count-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 980px) { .count-grid { grid-template-columns: repeat(4, 1fr); } }
+    .count-card {
+      background: var(--paper); border-radius: 18px; padding: 16px;
+      box-shadow: var(--shadow-soft); border: 1px solid rgba(255,255,255,.9);
+    }
+    .count-card .who { font-family: var(--header-serif); font-size: 1.35rem; }
+    .count-card .meta { color: var(--ink-soft); font-size: 0.82rem; margin: 2px 0 10px; }
+    .ticks { display: flex; gap: 6px; }
+    .tick { flex: 1; background: var(--cream-deep); border-radius: 12px; text-align: center; padding: 8px 2px 6px; }
+    .tick b { display: block; font-variant-numeric: tabular-nums; font-size: 1.15rem; }
+    .tick span { font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 700; }
+    .count-card.is-today { background: linear-gradient(180deg, #fff6f6, #fde8ea); outline: 2px solid var(--blush-deep); }
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 4px; }
+    .stat { text-align: center; background: rgba(255,252,249,0.8); border-radius: 16px; padding: 12px 8px; box-shadow: var(--shadow-soft); }
+    .stat b { display: block; font-family: var(--header-serif); font-size: 1.6rem; }
+    .stat span { font-size: 0.75rem; color: var(--ink-soft); font-weight: 700; }
+    .upload-zone {
+      border: 1.5px dashed var(--blush-mid); background: rgba(255,252,249,0.7);
+      border-radius: var(--radius); padding: 18px; text-align: center; margin-bottom: 18px;
+    }
+    .upload-zone p { color: var(--ink-soft); font-size: 0.9rem; margin: 6px 0 12px; }
+    .file-btn { position: relative; overflow: hidden; display: inline-flex; }
+    .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .polaroid-wall {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 18px 14px; padding: 8px 4px 12px;
+    }
+    .polaroid {
+      background: #fff; padding: 10px 10px 36px;
+      box-shadow: 0 8px 20px rgba(58,42,44,0.12); border-radius: 3px;
+      position: relative; transition: transform .2s ease, box-shadow .2s ease; cursor: pointer;
+    }
+    .polaroid:hover { z-index: 2; box-shadow: 0 14px 28px rgba(58,42,44,0.16); }
+    .polaroid img { width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--cream-deep); }
+    .polaroid .cap {
+      position: absolute; left: 10px; right: 28px; bottom: 8px;
+      font-family: var(--header-serif); font-style: italic; font-size: 0.95rem;
+      border: 0; background: transparent; width: auto; padding: 0; border-radius: 0; box-shadow: none;
+    }
+    .polaroid .cap:focus { box-shadow: none; border-bottom: 1px dashed var(--blush-deep); }
+    .polaroid .del {
+      position: absolute; top: 6px; right: 6px; width: 26px; height: 26px;
+      border: 0; border-radius: 50%; background: rgba(255,255,255,0.9); color: var(--rose);
+      font-size: 14px; display: none; align-items: center; justify-content: center; box-shadow: var(--shadow-soft);
+    }
+    .polaroid:hover .del, .polaroid:focus-within .del { display: flex; }
+    @media (hover: none) { .polaroid .del { display: flex; } }
+    .lightbox {
+      position: fixed; inset: 0; z-index: 80; background: rgba(40, 24, 28, 0.88);
+      display: none; align-items: center; justify-content: center; padding: 24px;
+    }
+    .lightbox.show { display: flex; }
+    .lightbox img {
+      max-width: min(92vw, 920px); max-height: 82vh; object-fit: contain;
+      border: 10px solid #fff; box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    }
+    .lightbox figcaption { color: #fff; text-align: center; margin-top: 10px; font-family: var(--header-serif); font-style: italic; font-size: 1.2rem; }
+    .lightbox .close { position: absolute; top: 14px; right: 14px; background: #fff; border: 0; border-radius: 999px; width: 40px; height: 40px; font-size: 1.2rem; }
+    .timeline { position: relative; margin: 8px 0 8px 12px; padding-left: 22px; }
+    .timeline::before {
+      content: ""; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 2px;
+      background: linear-gradient(180deg, var(--blush-mid), var(--lavender-mid), var(--sage-mid)); border-radius: 2px;
+    }
+    .tl-item { position: relative; margin-bottom: 16px; }
+    .tl-item::before {
+      content: ""; position: absolute; left: -20px; top: 16px; width: 12px; height: 12px;
+      background: var(--blush-deep); border: 3px solid #fff; border-radius: 50%; box-shadow: 0 0 0 2px var(--blush-mid);
+    }
+    .tl-item.custom::before { background: var(--lavender-deep); box-shadow: 0 0 0 2px var(--lavender-mid); }
+    .tl-card { background: var(--paper); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow-soft); }
+    .tl-card h3 { font-size: 1.25rem; }
+    .tl-date { color: var(--rose); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.02em; }
+    .year-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .year-row input { width: 110px; padding: 6px 8px; }
+    .year-row input[type="date"] { width: 160px; }
+    .muted { color: var(--ink-soft); font-size: 0.88rem; }
+    .years-badge {
+      display: inline-block; background: var(--lavender); color: var(--lavender-deep);
+      border-radius: 999px; padding: 4px 10px; font-weight: 700; font-size: 0.8rem; margin-top: 8px;
+    }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
+    .chip {
+      border: 1px solid var(--line); background: var(--paper); border-radius: 999px;
+      padding: 6px 12px; font-size: 0.8rem; font-weight: 700; color: var(--ink-soft);
+    }
+    .chip.on { background: var(--sage); color: #35553b; border-color: transparent; }
+    .place-list { display: grid; gap: 10px; }
+    .place { background: var(--paper); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow-soft); display: grid; gap: 4px; }
+    .place header { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    .place h3 { font-size: 1.25rem; }
+    .tag {
+      font-size: 0.7rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+      background: var(--cream-deep); color: var(--ink-soft); border-radius: 999px; padding: 3px 8px;
+    }
+    .hearts { color: var(--blush-deep); letter-spacing: 1px; }
+    .heart-picker { display: flex; gap: 2px; }
+    .heart-picker button { border: 0; background: transparent; font-size: 1.2rem; color: var(--blush-mid); padding: 2px; }
+    .heart-picker button.on { color: var(--blush-deep); }
+    .player-wrap iframe {
+      width: 100%; border: 0; border-radius: 16px; min-height: 352px; background: #fff; box-shadow: var(--shadow-soft);
+    }
+    .hint { font-size: 0.85rem; color: var(--ink-soft); margin-top: 6px; }
+    .jar-wrap { display: grid; gap: 16px; }
+    @media (min-width: 760px) { .jar-wrap { grid-template-columns: 240px 1fr; align-items: start; } }
+    .jar { width: 180px; margin: 0 auto; position: relative; filter: drop-shadow(0 10px 16px rgba(91,54,62,0.12)); }
+    .jar-lid { width: 92px; height: 16px; margin: 0 auto -2px; background: linear-gradient(180deg, #d8c09a, #c4a574); border-radius: 6px 6px 2px 2px; }
+    .jar-neck {
+      width: 70px; height: 18px; margin: 0 auto; background: rgba(200, 220, 230, 0.45);
+      border: 2px solid rgba(140, 160, 170, 0.45); border-bottom: 0; border-radius: 4px 4px 0 0;
+    }
+    .jar-body {
+      height: 170px; border: 2px solid rgba(140, 160, 170, 0.45); border-radius: 16px 16px 40px 40px;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.35), rgba(255,255,255,0) 30%, rgba(255,255,255,0.2)),
+        linear-gradient(180deg, rgba(228,216,240,0.35), rgba(243,208,211,0.4));
+      position: relative; overflow: hidden;
+    }
+    .slip { position: absolute; width: 46px; height: 16px; border-radius: 2px; transform-origin: center; opacity: 0.9; }
+    .jar-count { text-align: center; margin-top: 8px; font-weight: 700; color: var(--ink-soft); font-size: 0.88rem; }
+    .note-card {
+      background: #fffaf3; border-radius: 16px; padding: 16px; box-shadow: var(--shadow);
+      border-left: 4px solid var(--blush-mid); animation: fadeUp .3s ease;
+    }
+    .note-card .by { font-family: var(--header-serif); font-size: 1.15rem; color: var(--rose); }
+    .note-card .txt { margin: 6px 0; white-space: pre-wrap; }
+    .notes-list { display: grid; gap: 10px; margin-top: 14px; }
+    .note-mini { background: var(--paper); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow-soft); }
+    .empty {
+      text-align: center; color: var(--ink-soft); padding: 28px 12px;
+      background: rgba(255,252,249,0.55); border-radius: var(--radius); border: 1px dashed var(--line);
+    }
+    .empty .big { font-size: 1.5rem; margin-bottom: 6px; font-family: var(--header-serif); }
+    .toast {
+      position: fixed; left: 50%; bottom: calc(var(--nav-h) + 18px + env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff;
+      padding: 10px 16px; border-radius: 999px; font-size: 0.88rem; font-weight: 600;
+      z-index: 90; opacity: 0; pointer-events: none; transition: .25s ease;
+      max-width: min(90vw, 420px); text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    @media (min-width: 860px) { .toast { bottom: 24px; } }
+    #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 70; display: none; }
+    .upload-status { font-size: 0.85rem; color: var(--ink-soft); min-height: 1.2em; margin-top: 8px; }
+    .anniv-highlight {
+      background: linear-gradient(135deg, #f8e4e6, #eee4f6); border-radius: 18px;
+      padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow-soft);
+    }
+    .anniv-highlight h3 { font-size: 1.4rem; }
+    .anniv-highlight .ticks { margin-top: 10px; max-width: 360px; }
+  </style>
+</head>
+
+<body>
+  <canvas id="confetti"></canvas>
+  <header class="site-header">
+    <div class="site-kicker">Our little archive</div>
+    <h1 class="site-title">Moustapha, Maren &amp; Coco 💕</h1>
+    <p class="site-sub">A romantic memory vault &amp; digital scrapbook</p>
+    <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" type="button" id="btn-export">Export backup</button>
+      <label class="btn btn-ghost btn-sm file-btn" for="import-file">Import backup
+        <input id="import-file" type="file" accept="application/json,.json" />
+      </label>
+    </div>
+  </header>
+
+  <main>
+    <section class="section active" id="sec-today" data-sec="today">
+      <div class="hero-banner">
+        <p class="site-kicker" id="greeting-kicker">Welcome back</p>
+        <h2 id="greeting">Hello, loves</h2>
+        <p class="muted" id="today-line"></p>
+        <div class="celebrate" id="celebrate"></div>
+      </div>
+      <div class="section-head">
+        <div>
+          <h2>Coming up</h2>
+          <p>Live countdowns to birthdays and your official anniversary.</p>
+        </div>
+      </div>
+      <div class="count-grid" id="overview-countdowns"></div>
+      <div class="stats-row">
+        <div class="stat"><b id="stat-photos">0</b><span>Photos</span></div>
+        <div class="stat"><b id="stat-places">0</b><span>Places &amp; trips</span></div>
+        <div class="stat"><b id="stat-notes">0</b><span>Love notes</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="sec-gallery" data-sec="gallery">
+      <div class="section-head">
+        <div>
+          <h2>Our photos</h2>
+          <p>Add many pictures at once. They are kept on this device, gently compressed so more will fit.</p>
+        </div>
+      </div>
+      <div class="upload-zone">
+        <p>Select one photo or a whole handful from your camera roll.</p>
+        <label class="btn btn-primary file-btn" for="photo-input">Add photos
+          <input id="photo-input" type="file" multiple accept="image/*" />
+        </label>
+        <div class="upload-status" id="upload-status"></div>
+      </div>
+      <div class="polaroid-wall" id="polaroid-wall"></div>
+      <div class="empty" id="photos-empty">
+        <div class="big">Polaroids await</div>
+        <p>Your gallery is empty. Add a few favorite frames of the three of you.</p>
+      </div>
+    </section>
+
+    <section class="section" id="sec-timeline" data-sec="timeline">
+      <div class="section-head">
+        <div>
+          <h2>Our story</h2>
+          <p>Milestones, anniversaries, and the little chapters in between.</p>
+        </div>
+      </div>
+      <div class="anniv-highlight" id="anniv-box"></div>
+      <div class="timeline" id="timeline"></div>
+      <div class="card">
+        <h3 style="margin-bottom:10px;">Add a milestone</h3>
+        <div class="form-row cols-2">
+          <label class="fld">Title
+            <input type="text" id="ms-title" placeholder="First trip together" maxlength="80" />
+          </label>
+          <label class="fld">Date
+            <input type="date" id="ms-date" />
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-lavender" type="button" id="ms-add">Add to timeline</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="sec-birthdays" data-sec="birthdays">
+      <div class="section-head">
+        <div>
+          <h2>Birthdays</h2>
+          <p>A ticking countdown for each of you, plus a little celebration on the day.</p>
+        </div>
+      </div>
+      <div class="count-grid" id="bday-grid"></div>
+    </section>
+
+    <section class="section" id="sec-places" data-sec="places">
+      <div class="section-head">
+        <div>
+          <h2>Our places &amp; trips</h2>
+          <p>Coffee shops, dinners, weekends away, and favorite date spots.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="form-row cols-2">
+          <label class="fld">Name
+            <input type="text" id="pl-name" placeholder="The little cafe on the corner" maxlength="80" />
+          </label>
+          <label class="fld">Type
+            <select id="pl-type">
+              <option value="coffee">Coffee shop</option>
+              <option value="restaurant">Restaurant</option>
+              <option value="trip">Trip</option>
+              <option value="date">Date spot</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row cols-2">
+          <label class="fld">Date
+            <input type="date" id="pl-date" />
+          </label>
+          <label class="fld">Location
+            <input type="text" id="pl-loc" placeholder="City, neighborhood…" maxlength="80" />
+          </label>
+        </div>
+        <label class="fld">Notes
+          <textarea id="pl-notes" placeholder="What made it ours…"></textarea>
+        </label>
+        <div style="margin:10px 0 4px;">
+          <span class="muted" style="font-weight:700;font-size:0.82rem;">Rating</span>
+          <div class="heart-picker" id="pl-rating" data-value="0"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-sage" type="button" id="pl-save">Save place</button>
+          <button class="btn btn-ghost" type="button" id="pl-cancel" hidden>Cancel edit</button>
+        </div>
+      </div>
+      <div class="chips" id="pl-filters" style="margin-top:16px;"></div>
+      <div class="place-list" id="place-list"></div>
+      <div class="empty" id="places-empty">
+        <div class="big">A map of us</div>
+        <p>No places yet. Log a coffee, a dinner, or a trip you want to remember.</p>
+      </div>
+    </section>
+
+    <section class="section" id="sec-music" data-sec="music">
+      <div class="section-head">
+        <div>
+          <h2>Our soundtrack</h2>
+          <p>Paste a Spotify or Apple Music playlist, album, or track, and we will play it right here.</p>
+        </div>
+      </div>
+      <div class="card">
+        <label class="fld">Playlist or track link
+          <input type="url" id="music-url" placeholder="https://open.spotify.com/playlist/… or music.apple.com/…" />
+        </label>
+        <p class="hint">Spotify and Apple Music links are turned into an embedded player. The link is saved on this device.</p>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="button" id="music-save">Save &amp; play</button>
+          <button class="btn btn-ghost" type="button" id="music-clear">Clear</button>
+        </div>
+      </div>
+      <div class="player-wrap" id="player-wrap" style="margin-top:14px;"></div>
+    </section>
+
+    <section class="section" id="sec-notes" data-sec="notes">
+      <div class="section-head">
+        <div>
+          <h2>Love notes jar</h2>
+          <p>Write something sweet, tuck it away, and pull a note whenever you need one.</p>
+        </div>
+      </div>
+      <div class="jar-wrap">
+        <div>
+          <div class="jar" aria-hidden="true">
+            <div class="jar-lid"></div>
+            <div class="jar-neck"></div>
+            <div class="jar-body" id="jar-body"></div>
+          </div>
+          <div class="jar-count" id="jar-count">0 notes in the jar</div>
+          <div style="text-align:center;margin-top:12px;">
+            <button class="btn btn-primary" type="button" id="note-pull">Pull a random note</button>
+          </div>
+        </div>
+        <div>
+          <div class="card">
+            <div class="form-row">
+              <label class="fld">From
+                <select id="note-author">
+                  <option>Moustapha</option>
+                  <option>Maren</option>
+                  <option>Coco 🐾</option>
+                </select>
+              </label>
+            </div>
+            <label class="fld">Note
+              <textarea id="note-text" placeholder="A little something for later…" maxlength="800"></textarea>
+            </label>
+            <div class="form-actions">
+              <button class="btn btn-lavender" type="button" id="note-save">Tuck into the jar</button>
+            </div>
+          </div>
+          <div id="drawn-note" style="margin-top:14px;"></div>
+        </div>
+      </div>
+      <h3 class="serif" style="margin:22px 0 10px;font-size:1.4rem;">All notes</h3>
+      <div class="notes-list" id="notes-list"></div>
+      <div class="empty" id="notes-empty">
+        <div class="big">The jar is waiting</div>
+        <p>Write the first love note and drop it in.</p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="app-nav" aria-label="Sections">
+    <button type="button" data-go="today" class="active"><span class="ico">⌂</span>Today</button>
+    <button type="button" data-go="gallery"><span class="ico">✦</span>Photos</button>
+    <button type="button" data-go="timeline"><span class="ico">♡</span>Story</button>
+    <button type="button" data-go="birthdays"><span class="ico">✧</span>Birthdays</button>
+    <button type="button" data-go="places"><span class="ico">❀</span>Places</button>
+    <button type="button" data-go="music"><span class="ico">♪</span>Music</button>
+    <button type="button" data-go="notes"><span class="ico">✉</span>Notes</button>
+  </nav>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo">
+    <button class="close" type="button" id="lightbox-close" aria-label="Close">×</button>
+    <figure>
+      <img id="lightbox-img" alt="" />
+      <figcaption id="lightbox-cap"></figcaption>
+    </figure>
+  </div>
+
+  <script>
+
+  (() => {
+    "use strict";
+
+    const KEYS = {
+      photos: "mv.photos",
+      years: "mv.years",
+      movingIn: "mv.movingIn",
+      milestones: "mv.milestones",
+      places: "mv.places",
+      music: "mv.music",
+      notes: "mv.notes",
+    };
+
+    const PEOPLE = [
+      { id: "moustapha", name: "Moustapha", month: 1, day: 28, year: 1992, kind: "birthday" },
+      { id: "maren", name: "Maren", month: 4, day: 3, year: 1995, kind: "birthday" },
+      { id: "coco", name: "Coco", month: 3, day: 4, year: 2020, kind: "birthday", pet: true },
+    ];
+
+    const PLACE_TYPES = {
+      coffee: "Coffee shop",
+      restaurant: "Restaurant",
+      trip: "Trip",
+      date: "Date spot",
+      other: "Other",
+    };
+
+    const SLIP_COLORS = ["#F3D0D3", "#E4D8F0", "#D4E2D4", "#E8D5B5", "#f6e0c8", "#e8c4c8"];
+
+    const $ = (sel, root) => (root || document).querySelector(sel);
+    const $$ = (sel, root) => [...(root || document).querySelectorAll(sel)];
+
+    function escapeHtml(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => (
+        { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+      ));
+    }
+
+    function uid() {
+      return (crypto.randomUUID && crypto.randomUUID()) ||
+        ("id" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+    }
+
+    function load(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function save(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function isQuotaError(err) {
+      return err && (err.name === "QuotaExceededError" || err.code === 22 || err.code === 1014);
+    }
+
+    let toastTimer;
+    function toast(msg) {
+      const el = $("#toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 3800);
+    }
+
+    let photos = load(KEYS.photos, []);
+    let years = load(KEYS.years, { dating: "", anniversary: "" });
+    let movingIn = load(KEYS.movingIn, "");
+    let milestones = load(KEYS.milestones, []);
+    let places = load(KEYS.places, []);
+    let music = load(KEYS.music, { url: "" });
+    let notes = load(KEYS.notes, []);
+    let placeFilter = "all";
+    let editingPlaceId = null;
+    let placeRating = 0;
+
+    function showSection(id) {
+      $$(".section").forEach((s) => s.classList.toggle("active", s.dataset.sec === id));
+      $$(".app-nav button").forEach((b) => b.classList.toggle("active", b.dataset.go === id));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    $$(".app-nav button").forEach((b) => {
+      b.addEventListener("click", () => showSection(b.dataset.go));
+    });
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function monthDayLabel(month, day) {
+      return new Date(2000, month - 1, day).toLocaleDateString(undefined, { month: "long", day: "numeric" });
+    }
+
+    function formatFull(iso) {
+      if (!iso) return "";
+      const parts = iso.split("-").map(Number);
+      const y = parts[0], m = parts[1], d = parts[2];
+      if (!y || !m || !d) return iso;
+      return new Date(y, m - 1, d).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    }
+
+    function nextOccurrence(month, day, from) {
+      const now = from || new Date();
+      let year = now.getFullYear();
+      let target = new Date(year, month - 1, day, 0, 0, 0, 0);
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (target < todayStart) {
+        year += 1;
+        target = new Date(year, month - 1, day, 0, 0, 0, 0);
+      }
+      return { date: target, year: year };
+    }
+
+    function isToday(month, day, from) {
+      const now = from || new Date();
+      return now.getMonth() + 1 === month && now.getDate() === day;
+    }
+
+    function remaining(toDate, from) {
+      const now = from || new Date();
+      const todayEvent = isToday(toDate.getMonth() + 1, toDate.getDate(), now);
+      let ms = toDate.getTime() - now.getTime();
+      if (todayEvent) return { days: 0, hours: 0, minutes: 0, seconds: 0, total: 0, today: true };
+      if (ms < 0) ms = 0;
+      const days = Math.floor(ms / 86400000);
+      const hours = Math.floor((ms % 86400000) / 3600000);
+      const minutes = Math.floor((ms % 3600000) / 60000);
+      const seconds = Math.floor((ms % 60000) / 1000);
+      return { days: days, hours: hours, minutes: minutes, seconds: seconds, total: ms, today: false };
+    }
+
+    function tickHtml(r) {
+      if (r.today) return '<div class="ticks"><div class="tick" style="flex:1"><b>Today</b><span>celebrate</span></div></div>';
+      return '<div class="ticks">' +
+        '<div class="tick"><b>' + r.days + '</b><span>days</span></div>' +
+        '<div class="tick"><b>' + pad(r.hours) + '</b><span>hrs</span></div>' +
+        '<div class="tick"><b>' + pad(r.minutes) + '</b><span>min</span></div>' +
+        '<div class="tick"><b>' + pad(r.seconds) + '</b><span>sec</span></div>' +
+        '</div>';
+    }
+
+    function yearsTogether() {
+      const y = parseInt(years.anniversary, 10);
+      if (!y || y < 1900 || y > 2100) return null;
+      const now = new Date();
+      let n = now.getFullYear() - y;
+      const reached = now.getMonth() + 1 > 4 || (now.getMonth() + 1 === 4 && now.getDate() >= 18);
+      if (!reached) n -= 1;
+      return Math.max(0, n);
+    }
+
+    function ageTurning(birthYear, nextYear) {
+      return nextYear - birthYear;
+    }
+
+    function eventsList() {
+      const now = new Date();
+      const list = PEOPLE.map((p) => {
+        const nx = nextOccurrence(p.month, p.day, now);
+        return {
+          id: p.id,
+          title: p.pet ? p.name + " 🐾" : p.name,
+          subtitle: "Birthday · " + monthDayLabel(p.month, p.day) + " " + p.year,
+          extra: "Turning " + ageTurning(p.year, nx.year),
+          month: p.month,
+          day: p.day,
+          next: nx,
+          kind: "birthday",
+        };
+      });
+      const ann = nextOccurrence(4, 18, now);
+      const yt = yearsTogether();
+      let extra;
+      if (yt == null) {
+        extra = "Add the year in Our Story to see years together.";
+      } else if (isToday(4, 18, now)) {
+        extra = yt === 0 ? "Today marks the beginning." : ("Celebrating " + yt + (yt === 1 ? " year" : " years") + " together.");
+      } else {
+        const nextYears = ann.year - parseInt(years.anniversary, 10);
+        extra = yt + (yt === 1 ? " year" : " years") + " together so far · you will celebrate " + nextYears + " on " + monthDayLabel(4, 18) + ".";
+      }
+      list.push({
+        id: "anniversary",
+        title: "Anniversary",
+        subtitle: "Official · " + monthDayLabel(4, 18),
+        extra: extra,
+        month: 4,
+        day: 18,
+        next: ann,
+        kind: "anniversary",
+      });
+      return list;
+    }
+
+    function renderCountdownCards(target, includeAnniv) {
+      const now = new Date();
+      const items = includeAnniv ? eventsList() : eventsList().filter((e) => e.kind === "birthday");
+      target.innerHTML = items.map((e) => {
+        const r = remaining(e.next.date, now);
+        return '<article class="count-card' + (r.today ? " is-today" : "") + '" data-count="' + escapeHtml(e.id) + '">' +
+          '<div class="who">' + escapeHtml(e.title) + (r.today ? " 🎉" : "") + "</div>" +
+          '<div class="meta">' + escapeHtml(e.subtitle) + "</div>" +
+          '<div class="meta">' + escapeHtml(e.extra) + "</div>" +
+          tickHtml(r) +
+          "</article>";
+      }).join("");
+    }
+
+    function updateTicksOnly() {
+      const now = new Date();
+      const map = {};
+      eventsList().forEach((e) => { map[e.id] = e; });
+      $$("[data-count]").forEach((card) => {
+        const e = map[card.dataset.count];
+        if (!e) return;
+        const r = remaining(e.next.date, now);
+        card.classList.toggle("is-today", r.today);
+        const ticks = card.querySelector(".ticks");
+        if (ticks) ticks.outerHTML = tickHtml(r);
+      });
+      const box = $("#anniv-box");
+      if (box && $("#sec-timeline").classList.contains("active")) {
+        const ticks = box.querySelector(".ticks");
+        if (ticks) ticks.outerHTML = tickHtml(remaining(nextOccurrence(4, 18, now).date, now));
+      }
+    }
+
+    function greeting() {
+      const h = new Date().getHours();
+      if (h < 12) return "Good morning";
+      if (h < 18) return "Good afternoon";
+      return "Good evening";
+    }
+
+    function renderTodayChrome() {
+      const now = new Date();
+      $("#greeting-kicker").textContent = greeting();
+      $("#greeting").textContent = "Moustapha, Maren & Coco";
+      $("#today-line").textContent = now.toLocaleDateString(undefined, {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+      });
+      const messages = [];
+      if (isToday(1, 28, now)) messages.push("Happy Birthday, Moustapha! 🎂");
+      if (isToday(4, 3, now)) messages.push("Happy Birthday, Maren! 🎂");
+      if (isToday(3, 4, now)) messages.push("Happy Birthday, Coco! 🐾🎂");
+      if (isToday(4, 18, now)) {
+        const yt = yearsTogether();
+        messages.push(yt == null ? "Happy Anniversary! 💕" : ("Happy Anniversary — " + yt + (yt === 1 ? " year" : " years") + " together! 💕"));
+      }
+      if (isToday(4, 2, now)) messages.push("Today marks the day you started dating. 🌸");
+      const box = $("#celebrate");
+      if (messages.length) {
+        box.innerHTML = messages.map((m) => "<div>" + escapeHtml(m) + "</div>").join("");
+        box.classList.add("show");
+        startConfetti();
+      } else {
+        box.classList.remove("show");
+        box.innerHTML = "";
+        stopConfetti();
+      }
+      $("#stat-photos").textContent = photos.length;
+      $("#stat-places").textContent = places.length;
+      $("#stat-notes").textContent = notes.length;
+    }
+
+    let confettiOn = false;
+    let confettiRaf = 0;
+
+    function startConfetti() {
+      const canvas = $("#confetti");
+      canvas.style.display = "block";
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      if (confettiOn) return;
+      confettiOn = true;
+      const ctx = canvas.getContext("2d");
+      const colors = ["#C97B84", "#8E6EAE", "#6B8F71", "#C4A574", "#E8B4B8", "#ffffff"];
+      const bits = Array.from({ length: 80 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * -canvas.height,
+        s: 4 + Math.random() * 6,
+        v: 1 + Math.random() * 2.5,
+        w: Math.random() * 6,
+        c: colors[Math.floor(Math.random() * colors.length)],
+        r: Math.random() * 360,
+      }));
+      function frame() {
+        if (!confettiOn) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        bits.forEach((b) => {
+          b.y += b.v;
+          b.x += Math.sin(b.y / 20) * 0.6;
+          b.r += 2;
+          if (b.y > canvas.height) b.y = -10;
+          ctx.save();
+          ctx.translate(b.x, b.y);
+          ctx.rotate((b.r * Math.PI) / 180);
+          ctx.fillStyle = b.c;
+          ctx.fillRect(-b.s / 2, -b.w / 2, b.s, b.w);
+          ctx.restore();
+        });
+        confettiRaf = requestAnimationFrame(frame);
+      }
+      frame();
+    }
+
+    function stopConfetti() {
+      confettiOn = false;
+      cancelAnimationFrame(confettiRaf);
+      const el = $("#confetti");
+      if (el) {
+        el.style.display = "none";
+        const ctx = el.getContext && el.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, el.width, el.height);
+      }
+    }
+
+    function compressImage(file, maxSide, quality) {
+      maxSide = maxSide || 1000;
+      quality = quality == null ? 0.7 : quality;
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          let width = img.width, height = img.height;
+          const long = Math.max(width, height);
+          if (long > maxSide) {
+            const scale = maxSide / long;
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Could not read this image"));
+        };
+        img.src = url;
+      });
+    }
+
+    function renderPhotos() {
+      const wall = $("#polaroid-wall");
+      const empty = $("#photos-empty");
+      empty.style.display = photos.length ? "none" : "block";
+      wall.innerHTML = photos.map((p) =>
+        '<figure class="polaroid" data-id="' + escapeHtml(p.id) + '" style="transform: rotate(' + (p.rotation || 0) + 'deg)">' +
+          '<button class="del" type="button" data-del="' + escapeHtml(p.id) + '" aria-label="Delete photo">×</button>' +
+          '<img src="' + p.dataUrl + '" alt="' + escapeHtml(p.caption || "Photo") + '" data-open="' + escapeHtml(p.id) + '" />' +
+          '<input class="cap" data-cap="' + escapeHtml(p.id) + '" value="' + escapeHtml(p.caption || "") + '" placeholder="Add a caption…" maxlength="60" />' +
+        "</figure>"
+      ).join("");
+      $("#stat-photos").textContent = photos.length;
+    }
+
+    async function addPhotos(fileList) {
+      const files = [...fileList].filter((f) => f.type.startsWith("image/") || !f.type);
+      const images = files.filter((f) => !f.type || f.type.startsWith("image/"));
+      if (!images.length) {
+        toast("Please choose image files.");
+        return;
+      }
+      const status = $("#upload-status");
+      let added = 0;
+      for (let i = 0; i < images.length; i++) {
+        status.textContent = "Preparing " + (i + 1) + " of " + images.length + "…";
+        try {
+          const dataUrl = await compressImage(images[i], 1000, 0.7);
+          const base = (images[i].name || "photo").replace(/\.[^.]+$/, "").slice(0, 60);
+          const item = {
+            id: uid(),
+            dataUrl: dataUrl,
+            caption: base,
+            createdAt: Date.now(),
+            rotation: Math.round((Math.random() * 6 - 3) * 10) / 10,
+          };
+          photos = [item].concat(photos);
+          try {
+            save(KEYS.photos, photos);
+            added++;
+          } catch (err) {
+            photos = photos.filter((p) => p.id !== item.id);
+            if (isQuotaError(err)) {
+              toast("Storage is full. This device cannot keep more photos here. Delete a few, or export a backup first.");
+              status.textContent = "Stopped — storage is full.";
+              renderPhotos();
+              return;
+            }
+            throw err;
+          }
+        } catch (err) {
+          console.warn(err);
+          toast("Could not add “" + images[i].name + "”. Try another photo.");
+        }
+      }
+      renderPhotos();
+      status.textContent = added ? ("Added " + added + " photo" + (added === 1 ? "" : "s") + ".") : "";
+      if (added) toast("Added " + added + " photo" + (added === 1 ? "" : "s") + " to your vault.");
+    }
+
+    $("#photo-input").addEventListener("change", (e) => {
+      addPhotos(e.target.files);
+      e.target.value = "";
+    });
+
+    $("#polaroid-wall").addEventListener("click", (e) => {
+      const del = e.target.closest("[data-del]");
+      if (del) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = del.dataset.del;
+        if (confirm("Remove this photo from the vault?")) {
+          photos = photos.filter((p) => p.id !== id);
+          try { save(KEYS.photos, photos); } catch (err) {}
+          renderPhotos();
+          toast("Photo removed.");
+        }
+        return;
+      }
+      const open = e.target.closest("[data-open]");
+      if (open) openLightbox(open.dataset.open);
+    });
+
+    $("#polaroid-wall").addEventListener("change", (e) => {
+      const cap = e.target.closest("[data-cap]");
+      if (!cap) return;
+      const photo = photos.find((p) => p.id === cap.dataset.cap);
+      if (!photo) return;
+      photo.caption = cap.value.slice(0, 60);
+      try { save(KEYS.photos, photos); } catch (err) {
+        if (isQuotaError(err)) toast("Could not save the caption — storage is full.");
+      }
+    });
+
+    function openLightbox(id) {
+      const p = photos.find((x) => x.id === id);
+      if (!p) return;
+      $("#lightbox-img").src = p.dataUrl;
+      $("#lightbox-img").alt = p.caption || "Photo";
+      $("#lightbox-cap").textContent = p.caption || "";
+      $("#lightbox").classList.add("show");
+    }
+    function closeLightbox() {
+      $("#lightbox").classList.remove("show");
+      $("#lightbox-img").src = "";
+    }
+    $("#lightbox-close").addEventListener("click", closeLightbox);
+    $("#lightbox").addEventListener("click", (e) => {
+      if (e.target.id === "lightbox") closeLightbox();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeLightbox();
+    });
+
+    function renderTimeline() {
+      const yt = yearsTogether();
+      const now = new Date();
+      const ann = nextOccurrence(4, 18, now);
+      const r = remaining(ann.date, now);
+      const days = r.today ? 0 : r.days;
+      let yearsLine;
+      if (yt != null) {
+        yearsLine = r.today
+          ? '<div class="years-badge">' + yt + (yt === 1 ? " year" : " years") + " together</div>"
+          : '<div class="years-badge">' + yt + (yt === 1 ? " year" : " years") + " together · " + days + " day" + (days === 1 ? "" : "s") + " until the next anniversary</div>";
+      } else {
+        const lead = r.today ? "Happy Anniversary today." : (days + " day" + (days === 1 ? "" : "s") + " until the next anniversary (April 18).");
+        yearsLine = '<p class="muted" style="margin-top:8px;">' + lead + " Set the year you began to see how many years you have been together.</p>";
+      }
+      $("#anniv-box").innerHTML =
+        "<h3>Next anniversary — April 18</h3>" +
+        (r.today
+          ? "<p><strong>That is today. Happy Anniversary. 💕</strong></p>"
+          : '<p class="muted">' + ann.date.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }) + "</p>") +
+        tickHtml(r) +
+        yearsLine;
+
+      const datingYear = (years.dating || "").toString();
+      const annYear = (years.anniversary || "").toString();
+      const items = [];
+
+      items.push({
+        sort: (datingYear ? Number(datingYear) : 9999) * 10000 + 402,
+        html: '<div class="tl-item"><div class="tl-card">' +
+          '<div class="tl-date">' + monthDayLabel(4, 2) + (datingYear ? ", " + escapeHtml(datingYear) : "") + "</div>" +
+          "<h3>Started Dating</h3>" +
+          '<p class="muted">The beginning of the story. Add the year if you would like it remembered here — we will not invent one.</p>' +
+          '<div class="year-row"><label class="fld" style="flex-direction:row;align-items:center;gap:8px;">Year' +
+          '<input type="number" min="1980" max="2100" placeholder="Year" id="year-dating" value="' + escapeHtml(datingYear) + '" /></label></div>' +
+          "</div></div>",
+      });
+
+      items.push({
+        sort: (annYear ? Number(annYear) : 9999) * 10000 + 418,
+        html: '<div class="tl-item"><div class="tl-card">' +
+          '<div class="tl-date">' + monthDayLabel(4, 18) + (annYear ? ", " + escapeHtml(annYear) : "") + "</div>" +
+          "<h3>Official Anniversary / Relationship Begins</h3>" +
+          '<p class="muted">Your official anniversary. Set the year to track how many years you have been together.</p>' +
+          '<div class="year-row"><label class="fld" style="flex-direction:row;align-items:center;gap:8px;">Year' +
+          '<input type="number" min="1980" max="2100" placeholder="Year" id="year-anniv" value="' + escapeHtml(annYear) + '" /></label></div>' +
+          "</div></div>",
+      });
+
+      const movingLabel = movingIn ? formatFull(movingIn) : "Add a date";
+      const movingSort = movingIn ? Number(String(movingIn).replace(/-/g, "")) : 99999999;
+      items.push({
+        sort: movingSort,
+        html: '<div class="tl-item"><div class="tl-card">' +
+          '<div class="tl-date">' + escapeHtml(movingLabel) + "</div>" +
+          "<h3>Moving in together</h3>" +
+          '<p class="muted">A home of your own — add the day you moved in, whenever you are ready.</p>' +
+          '<div class="year-row"><label class="fld" style="flex-direction:row;align-items:center;gap:8px;">Date' +
+          '<input type="date" id="moving-in" value="' + escapeHtml(movingIn) + '" /></label>' +
+          (movingIn ? '<button class="btn btn-ghost btn-sm" type="button" id="moving-clear">Clear</button>' : "") +
+          "</div></div></div>",
+      });
+
+      milestones.forEach((m) => {
+        const sort = m.date ? Number(String(m.date).replace(/-/g, "")) : 99999999;
+        items.push({
+          sort: sort,
+          html: '<div class="tl-item custom"><div class="tl-card">' +
+            '<div class="tl-date">' + escapeHtml(formatFull(m.date) || "Date to be remembered") + "</div>" +
+            "<h3>" + escapeHtml(m.title) + "</h3>" +
+            '<div class="form-actions"><button class="btn btn-danger btn-sm" type="button" data-ms-del="' + escapeHtml(m.id) + '">Remove</button></div>' +
+            "</div></div>",
+        });
+      });
+
+      items.sort((a, b) => a.sort - b.sort);
+      $("#timeline").innerHTML = items.map((i) => i.html).join("");
+    }
+
+    $("#timeline").addEventListener("change", (e) => {
+      if (e.target.id === "year-dating") {
+        years.dating = e.target.value.trim();
+        save(KEYS.years, years);
+        renderTimeline();
+        renderAllCountdowns();
+      }
+      if (e.target.id === "year-anniv") {
+        years.anniversary = e.target.value.trim();
+        save(KEYS.years, years);
+        renderTimeline();
+        renderAllCountdowns();
+        renderTodayChrome();
+      }
+      if (e.target.id === "moving-in") {
+        movingIn = e.target.value;
+        save(KEYS.movingIn, movingIn);
+        renderTimeline();
+      }
+    });
+
+    $("#timeline").addEventListener("click", (e) => {
+      if (e.target.id === "moving-clear") {
+        movingIn = "";
+        save(KEYS.movingIn, movingIn);
+        renderTimeline();
+      }
+      const del = e.target.closest("[data-ms-del]");
+      if (del) {
+        milestones = milestones.filter((m) => m.id !== del.dataset.msDel);
+        save(KEYS.milestones, milestones);
+        renderTimeline();
+        toast("Milestone removed.");
+      }
+    });
+
+    $("#ms-add").addEventListener("click", () => {
+      const title = $("#ms-title").value.trim();
+      const date = $("#ms-date").value;
+      if (!title) { toast("Give your milestone a title."); return; }
+      if (!date) { toast("Please add a date."); return; }
+      milestones.push({ id: uid(), title: title, date: date });
+      save(KEYS.milestones, milestones);
+      $("#ms-title").value = "";
+      $("#ms-date").value = "";
+      renderTimeline();
+      toast("Milestone added to your story.");
+    });
+
+    function renderHeartPicker() {
+      const el = $("#pl-rating");
+      el.innerHTML = [1, 2, 3, 4, 5].map((n) =>
+        '<button type="button" data-h="' + n + '" class="' + (n <= placeRating ? "on" : "") + '" aria-label="' + n + ' hearts">' +
+        (n <= placeRating ? "♥" : "♡") + "</button>"
+      ).join("");
+    }
+    $("#pl-rating").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-h]");
+      if (!b) return;
+      const n = Number(b.dataset.h);
+      placeRating = placeRating === n ? 0 : n;
+      renderHeartPicker();
+    });
+
+    function renderFilters() {
+      const keys = ["all"].concat(Object.keys(PLACE_TYPES));
+      $("#pl-filters").innerHTML = keys.map((k) =>
+        '<button type="button" class="chip' + (placeFilter === k ? " on" : "") + '" data-filter="' + k + '">' +
+        (k === "all" ? "All" : PLACE_TYPES[k]) + "</button>"
+      ).join("");
+    }
+    $("#pl-filters").addEventListener("click", (e) => {
+      const c = e.target.closest("[data-filter]");
+      if (!c) return;
+      placeFilter = c.dataset.filter;
+      renderPlaces();
+    });
+
+    function resetPlaceForm() {
+      editingPlaceId = null;
+      $("#pl-name").value = "";
+      $("#pl-type").value = "coffee";
+      $("#pl-date").value = "";
+      $("#pl-loc").value = "";
+      $("#pl-notes").value = "";
+      placeRating = 0;
+      renderHeartPicker();
+      $("#pl-save").textContent = "Save place";
+      $("#pl-cancel").hidden = true;
+    }
+
+    function renderPlaces() {
+      renderFilters();
+      const list = places
+        .filter((p) => placeFilter === "all" || p.type === placeFilter)
+        .slice()
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+      $("#places-empty").style.display = places.length ? "none" : "block";
+      $("#place-list").innerHTML = list.map((p) =>
+        '<article class="place"><header><div>' +
+        '<span class="tag">' + escapeHtml(PLACE_TYPES[p.type] || p.type) + "</span>" +
+        "<h3>" + escapeHtml(p.name) + "</h3></div>" +
+        '<div class="form-actions">' +
+        '<button class="btn btn-ghost btn-sm" type="button" data-pl-edit="' + escapeHtml(p.id) + '">Edit</button>' +
+        '<button class="btn btn-danger btn-sm" type="button" data-pl-del="' + escapeHtml(p.id) + '">Delete</button>' +
+        "</div></header>" +
+        '<div class="muted">' + (p.date ? escapeHtml(formatFull(p.date)) : "Date not set") + (p.location ? " · " + escapeHtml(p.location) : "") + "</div>" +
+        (p.rating ? ('<div class="hearts">' + "♥".repeat(p.rating) + "♡".repeat(Math.max(0, 5 - p.rating)) + "</div>") : "") +
+        (p.notes ? ("<p>" + escapeHtml(p.notes) + "</p>") : "") +
+        "</article>"
+      ).join("");
+      $("#stat-places").textContent = places.length;
+    }
+
+    $("#pl-save").addEventListener("click", () => {
+      const name = $("#pl-name").value.trim();
+      if (!name) { toast("Please add a name for this place."); return; }
+      const entry = {
+        id: editingPlaceId || uid(),
+        name: name,
+        type: $("#pl-type").value,
+        date: $("#pl-date").value,
+        location: $("#pl-loc").value.trim(),
+        notes: $("#pl-notes").value.trim(),
+        rating: placeRating,
+      };
+      if (editingPlaceId) {
+        places = places.map((p) => (p.id === editingPlaceId ? entry : p));
+        toast("Place updated.");
+      } else {
+        places = [entry].concat(places);
+        toast("Place saved.");
+      }
+      save(KEYS.places, places);
+      resetPlaceForm();
+      renderPlaces();
+    });
+    $("#pl-cancel").addEventListener("click", resetPlaceForm);
+
+    $("#place-list").addEventListener("click", (e) => {
+      const del = e.target.closest("[data-pl-del]");
+      if (del) {
+        if (!confirm("Delete this place?")) return;
+        places = places.filter((p) => p.id !== del.dataset.plDel);
+        save(KEYS.places, places);
+        if (editingPlaceId === del.dataset.plDel) resetPlaceForm();
+        renderPlaces();
+        toast("Place removed.");
+        return;
+      }
+      const ed = e.target.closest("[data-pl-edit]");
+      if (ed) {
+        const p = places.find((x) => x.id === ed.dataset.plEdit);
+        if (!p) return;
+        editingPlaceId = p.id;
+        $("#pl-name").value = p.name;
+        $("#pl-type").value = p.type;
+        $("#pl-date").value = p.date || "";
+        $("#pl-loc").value = p.location || "";
+        $("#pl-notes").value = p.notes || "";
+        placeRating = p.rating || 0;
+        renderHeartPicker();
+        $("#pl-save").textContent = "Update place";
+        $("#pl-cancel").hidden = false;
+        $("#pl-name").focus();
+        showSection("places");
+      }
+    });
+
+    function toEmbedUrl(raw) {
+      if (!raw) return null;
+      let url;
+      try { url = new URL(raw.trim()); } catch (e) { return null; }
+      const host = url.hostname.replace(/^www\./, "");
+      if (host === "open.spotify.com" || host === "play.spotify.com" || host.endsWith(".spotify.com")) {
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (parts[0] && /^intl-/i.test(parts[0])) parts.shift();
+        const type = parts[0];
+        const id = parts[1] ? parts[1].split("?")[0] : "";
+        const allowed = ["playlist", "album", "track", "artist", "episode", "show"];
+        if (allowed.indexOf(type) === -1 || !id) return null;
+        return "https://open.spotify.com/embed/" + type + "/" + id;
+      }
+      if (host === "music.apple.com" || host === "embed.music.apple.com" || (host.endsWith(".apple.com") && host.indexOf("music") !== -1)) {
+        const path = url.pathname + url.search;
+        return "https://embed.music.apple.com" + (path.charAt(0) === "/" ? path : "/" + path);
+      }
+      return null;
+    }
+
+    function isAppleEmbed(u) { return /embed\.music\.apple\.com/.test(u); }
+
+    function renderMusic() {
+      $("#music-url").value = music.url || "";
+      const wrap = $("#player-wrap");
+      const embed = music.embed || toEmbedUrl(music.url || "");
+      if (!embed) {
+        wrap.innerHTML = music.url
+          ? '<div class="empty"><p>That link could not be turned into a player. Paste a full Spotify or Apple Music URL (not a short link).</p></div>'
+          : '<div class="empty"><div class="big">♪</div><p>No playlist yet. Paste a link to the songs that feel like home.</p></div>';
+        return;
+      }
+      if (isAppleEmbed(embed)) {
+        wrap.innerHTML = '<iframe allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" height="450" style="width:100%;overflow:hidden;border-radius:16px;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" src="' + escapeHtml(embed) + '" title="Apple Music player"></iframe>';
+      } else {
+        wrap.innerHTML = '<iframe style="border-radius:16px" src="' + escapeHtml(embed) + '" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="Spotify player"></iframe>';
+      }
+    }
+
+    $("#music-save").addEventListener("click", () => {
+      const url = $("#music-url").value.trim();
+      if (!url) { toast("Paste a Spotify or Apple Music link first."); return; }
+      const embed = toEmbedUrl(url);
+      if (!embed) {
+        toast("Please use a full open.spotify.com or music.apple.com link.");
+        return;
+      }
+      music = { url: url, embed: embed };
+      save(KEYS.music, music);
+      renderMusic();
+      toast("Playlist saved.");
+    });
+    $("#music-clear").addEventListener("click", () => {
+      music = { url: "" };
+      save(KEYS.music, music);
+      renderMusic();
+      toast("Player cleared.");
+    });
+
+    function renderJar() {
+      const body = $("#jar-body");
+      const n = notes.length;
+      const shown = Math.min(n, 14);
+      let html = "";
+      for (let i = 0; i < shown; i++) {
+        const left = 10 + (i * 37) % 110;
+        const bottom = 10 + (i * 23) % 120;
+        const rot = (i * 27) % 50 - 25;
+        const color = SLIP_COLORS[i % SLIP_COLORS.length];
+        html += '<span class="slip" style="left:' + left + "px;bottom:" + bottom + "px;background:" + color + ";transform:rotate(" + rot + 'deg)"></span>';
+      }
+      body.innerHTML = html;
+      $("#jar-count").textContent = n === 1 ? "1 note in the jar" : (n + " notes in the jar");
+    }
+
+    function renderNotes() {
+      renderJar();
+      const list = notes.slice().sort((a, b) => b.createdAt - a.createdAt);
+      $("#notes-empty").style.display = notes.length ? "none" : "block";
+      $("#notes-list").innerHTML = list.map((n) =>
+        '<article class="note-mini">' +
+          '<div class="by serif" style="color:var(--rose)">' + escapeHtml(n.author) + "</div>" +
+          '<div class="txt" style="white-space:pre-wrap;margin:4px 0 8px;">' + escapeHtml(n.text) + "</div>" +
+          '<div class="muted" style="font-size:0.78rem;">' + new Date(n.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) + "</div>" +
+          '<div class="form-actions" style="margin-top:6px;">' +
+          '<button class="btn btn-danger btn-sm" type="button" data-note-del="' + escapeHtml(n.id) + '">Delete</button>' +
+          "</div></article>"
+      ).join("");
+      $("#stat-notes").textContent = notes.length;
+    }
+
+    $("#note-save").addEventListener("click", () => {
+      const text = $("#note-text").value.trim();
+      if (!text) { toast("Write a little note first."); return; }
+      notes.push({
+        id: uid(),
+        author: $("#note-author").value,
+        text: text,
+        createdAt: Date.now(),
+      });
+      save(KEYS.notes, notes);
+      $("#note-text").value = "";
+      renderNotes();
+      toast("Tucked into the jar.");
+    });
+
+    $("#note-pull").addEventListener("click", () => {
+      if (!notes.length) { toast("The jar is empty — write a note first."); return; }
+      const n = notes[Math.floor(Math.random() * notes.length)];
+      $("#drawn-note").innerHTML = '<article class="note-card">' +
+        '<div class="muted" style="letter-spacing:.12em;text-transform:uppercase;font-size:.7rem;font-weight:800;">A note for you</div>' +
+        '<div class="by">' + escapeHtml(n.author) + "</div>" +
+        '<div class="txt">' + escapeHtml(n.text) + "</div></article>";
+    });
+
+    $("#notes-list").addEventListener("click", (e) => {
+      const del = e.target.closest("[data-note-del]");
+      if (!del) return;
+      if (!confirm("Delete this note?")) return;
+      notes = notes.filter((n) => n.id !== del.dataset.noteDel);
+      save(KEYS.notes, notes);
+      renderNotes();
+      toast("Note removed.");
+    });
+
+    function snapshot() {
+      return {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        photos: photos,
+        years: years,
+        movingIn: movingIn,
+        milestones: milestones,
+        places: places,
+        music: music,
+        notes: notes,
+      };
+    }
+
+    $("#btn-export").addEventListener("click", () => {
+      const blob = new Blob([JSON.stringify(snapshot(), null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      const d = new Date();
+      a.href = URL.createObjectURL(blob);
+      a.download = "memory-vault-backup-" + d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast("Backup downloaded.");
+    });
+
+    $("#import-file").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!data || typeof data !== "object") throw new Error("Invalid file");
+          if (!confirm("Import this backup? It will replace the photos, places, notes, and other memories currently on this device.")) return;
+          photos = Array.isArray(data.photos) ? data.photos : [];
+          years = data.years && typeof data.years === "object"
+            ? { dating: data.years.dating || "", anniversary: data.years.anniversary || "" }
+            : { dating: "", anniversary: "" };
+          movingIn = typeof data.movingIn === "string" ? data.movingIn : "";
+          milestones = Array.isArray(data.milestones) ? data.milestones : [];
+          places = Array.isArray(data.places) ? data.places : [];
+          music = data.music && typeof data.music === "object" ? data.music : { url: "" };
+          notes = Array.isArray(data.notes) ? data.notes : [];
+          try {
+            save(KEYS.photos, photos);
+            save(KEYS.years, years);
+            save(KEYS.movingIn, movingIn);
+            save(KEYS.milestones, milestones);
+            save(KEYS.places, places);
+            save(KEYS.music, music);
+            save(KEYS.notes, notes);
+          } catch (err) {
+            if (isQuotaError(err)) {
+              toast("This backup is too large for this browser’s storage. Try importing fewer photos.");
+              return;
+            }
+            throw err;
+          }
+          resetPlaceForm();
+          renderAll();
+          toast("Backup imported.");
+        } catch (err) {
+          toast("Could not read that backup file.");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    function renderAllCountdowns() {
+      renderCountdownCards($("#overview-countdowns"), true);
+      renderCountdownCards($("#bday-grid"), false);
+    }
+
+    function renderAll() {
+      renderTodayChrome();
+      renderAllCountdowns();
+      renderPhotos();
+      renderTimeline();
+      renderPlaces();
+      renderHeartPicker();
+      renderMusic();
+      renderNotes();
+    }
+
+    renderAll();
+    setInterval(updateTicksOnly, 1000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        renderTodayChrome();
+        renderAllCountdowns();
+      }
+    });
+  })();
+  </script>
+</body>
+</html>
