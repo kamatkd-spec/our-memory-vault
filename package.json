@@ -1,0 +1,8 @@
+{
+  "name": "our-memory-vault",
+  "private": true,
+  "description": "Shared memory vault for Moustapha, Maren & Coco",
+  "dependencies": {
+    "@vercel/blob": "^2.3.0"
+  }
+}

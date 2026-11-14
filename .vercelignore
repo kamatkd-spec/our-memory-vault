@@ -1,2 +1,6 @@
 .git
 .vercel
+node_modules
+.env*
+FAMILY_PASSWORD.txt
+.secrets

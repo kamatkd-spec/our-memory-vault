@@ -1,0 +1,5 @@
+.vercel
+.env*
+node_modules
+FAMILY_PASSWORD.txt
+.secrets

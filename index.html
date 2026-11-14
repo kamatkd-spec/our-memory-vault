@@ -361,10 +361,49 @@
     }
     .anniv-highlight h3 { font-size: 1.4rem; }
     .anniv-highlight .ticks { margin-top: 10px; max-width: 360px; }
+
+    body.locked { padding-bottom: 0; overflow: hidden; }
+    body.locked > *:not(#login-screen) { display: none !important; }
+    .login-screen {
+      position: fixed; inset: 0; z-index: 80;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(228, 216, 240, 0.7), transparent 55%),
+        radial-gradient(900px 500px at 110% 8%, rgba(243, 208, 211, 0.75), transparent 50%),
+        var(--cream);
+    }
+    .login-screen[hidden] { display: none !important; }
+    .login-card { width: min(420px, 100%); padding: 28px 22px 24px; text-align: center; }
+    .login-card h2 { font-size: 2rem; margin: 6px 0 8px; }
+    .login-card .fld { text-align: left; margin-top: 16px; }
+    .login-error { color: var(--rose); margin-top: 12px; font-weight: 600; }
+    .migrate-banner {
+      width: min(1080px, calc(100% - 28px)); margin: 12px auto 0;
+      display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    }
+    .migrate-banner[hidden] { display: none; }
+    .sync-status { font-size: 0.78rem; color: var(--ink-faint); margin-top: 8px; min-height: 1.1em; }
+    .polaroid img.photo-pending { min-height: 180px; background: var(--cream-deep); }
   </style>
 </head>
 
 <body>
+
+  <div id="login-screen" class="login-screen" hidden>
+    <div class="login-card card">
+      <div class="site-kicker">M&amp;M Memory</div>
+      <h2 class="serif">Welcome home</h2>
+      <p class="muted">Enter the family password once on this phone to open the shared vault.</p>
+      <label class="fld">Family password
+        <input id="login-pass" type="password" autocomplete="current-password" />
+      </label>
+      <div class="form-actions" style="margin-top:16px;justify-content:center;">
+        <button class="btn btn-primary" type="button" id="login-btn">Open the vault</button>
+      </div>
+      <p class="login-error" id="login-error" hidden></p>
+    </div>
+  </div>
   <canvas id="confetti"></canvas>
   <header class="site-header">
     <div class="site-kicker">Our little archive</div>
@@ -377,7 +416,12 @@
         <input id="import-file" type="file" accept="application/json,.json" />
       </label>
     </div>
+    <div class="sync-status" id="sync-status"></div>
   </header>
+  <div class="card migrate-banner" id="migrate-banner" hidden>
+    <p>This phone still has memories that are not in the shared vault yet.</p>
+    <button class="btn btn-lavender" type="button" id="btn-migrate">Upload my existing memories to the shared vault</button>
+  </div>
   <div class="card icon-panel" id="icon-panel" hidden>
     <h3 class="serif" style="font-size:1.3rem;">App icon</h3>
     <p class="muted">Choose a picture for the Home Screen icon when you add this vault to your phone.</p>
@@ -627,6 +671,7 @@
       music: "mv.music",
       notes: "mv.notes",
       icon: "mv.icon",
+      token: "mv.session",
     };
 
     const DEFAULT_ICON_180 = "apple-touch-icon.png";
@@ -684,7 +729,7 @@
       toastTimer = setTimeout(() => el.classList.remove("show"), 3800);
     }
 
-    function save(key, value) {
+    function saveLocalOnly(key, value) {
       try {
         localStorage.setItem(key, JSON.stringify(value));
         return true;
@@ -696,6 +741,12 @@
         }
         return false;
       }
+    }
+
+    function save(key, value) {
+      const ok = saveLocalOnly(key, value);
+      if (ok) schedulePush();
+      return ok;
     }
 
     const IDB_NAME = "memory-vault";
@@ -807,6 +858,464 @@
     let editingPlaceId = null;
     let placeRating = 0;
     let photosReady = false;
+
+
+    let sessionToken = "";
+    try { sessionToken = localStorage.getItem(KEYS.token) || ""; } catch (e) { sessionToken = ""; }
+    let remoteVersion = 0;
+    let remoteReady = false;
+    let pushing = false;
+    let pushQueued = false;
+    let yearsUpdatedAt = 0;
+    let movingInUpdatedAt = 0;
+    let musicUpdatedAt = 0;
+    let iconUpdatedAt = 0;
+    let localTombstones = { notes: {}, places: {}, milestones: {}, photos: {} };
+    let pendingMigrate = null;
+    const pendingUploads = {};
+    let hydratingPhotos = false;
+
+    function getToken() {
+      if (sessionToken) return sessionToken;
+      try { sessionToken = localStorage.getItem(KEYS.token) || ""; } catch (e) {}
+      return sessionToken;
+    }
+
+    function setToken(token) {
+      sessionToken = token || "";
+      try {
+        if (token) localStorage.setItem(KEYS.token, token);
+        else localStorage.removeItem(KEYS.token);
+      } catch (e) {}
+    }
+
+    async function apiFetch(path, opts) {
+      const options = Object.assign({ headers: {} }, opts || {});
+      options.headers = Object.assign({}, options.headers);
+      const token = getToken();
+      if (token) options.headers.Authorization = "Bearer " + token;
+      if (options.body && !options.headers["Content-Type"] && typeof options.body === "string") {
+        options.headers["Content-Type"] = "application/json";
+      }
+      const res = await fetch(path, options);
+      if (res.status === 401 && path !== "/api/login") {
+        setToken("");
+        remoteReady = false;
+        showLogin("Please enter the family password again.");
+      }
+      return res;
+    }
+
+    function showLogin(msg) {
+      document.body.classList.add("locked");
+      const screen = $("#login-screen");
+      if (screen) screen.hidden = false;
+      const err = $("#login-error");
+      if (err) {
+        if (msg) { err.hidden = false; err.textContent = msg; }
+        else { err.hidden = true; err.textContent = ""; }
+      }
+      const input = $("#login-pass");
+      if (input) setTimeout(() => input.focus(), 50);
+    }
+
+    function hideLogin() {
+      document.body.classList.remove("locked");
+      const screen = $("#login-screen");
+      if (screen) screen.hidden = true;
+    }
+
+    function setSyncStatus(text) {
+      const el = $("#sync-status");
+      if (el) el.textContent = text || "";
+    }
+
+    function photoMetaOnly(p) {
+      const o = {};
+      Object.keys(p || {}).forEach((k) => {
+        if (k !== "dataUrl") o[k] = p[k];
+      });
+      return o;
+    }
+
+    function idsMap(list) {
+      const s = {};
+      (list || []).forEach((i) => { if (i && i.id) s[i.id] = true; });
+      return s;
+    }
+
+    function buildOutgoingState() {
+      const ic = getSavedIcon();
+      return {
+        version: remoteVersion,
+        notes: notes.slice(),
+        places: places.slice(),
+        milestones: milestones.slice(),
+        photos: photos.map(photoMetaOnly),
+        settings: {
+          years: { dating: years.dating || "", anniversary: years.anniversary || "", updatedAt: yearsUpdatedAt },
+          movingIn: { value: movingIn || "", updatedAt: movingInUpdatedAt },
+          music: { url: (music && music.url) || "", updatedAt: musicUpdatedAt },
+          icon: { icon180: ic && ic.icon180 || null, icon512: ic && ic.icon512 || null, updatedAt: iconUpdatedAt },
+        },
+        tombstones: localTombstones,
+      };
+    }
+
+    function applyRemoteState(state) {
+      if (!state || typeof state !== "object") return;
+      remoteVersion = Number(state.version) || 0;
+      const keepSrc = {};
+      photos.forEach((p) => { if (p && p.id && p.dataUrl) keepSrc[p.id] = p.dataUrl; });
+      notes = Array.isArray(state.notes) ? state.notes.slice() : [];
+      places = Array.isArray(state.places) ? state.places.slice() : [];
+      milestones = Array.isArray(state.milestones) ? state.milestones.slice() : [];
+      photos = (Array.isArray(state.photos) ? state.photos : []).map((p) => {
+        const copy = Object.assign({}, p);
+        if (keepSrc[copy.id]) copy.dataUrl = keepSrc[copy.id];
+        return copy;
+      });
+      const s = state.settings || {};
+      if (s.years) {
+        years = { dating: s.years.dating || "", anniversary: s.years.anniversary || "" };
+        yearsUpdatedAt = Number(s.years.updatedAt) || 0;
+      }
+      if (s.movingIn) {
+        movingIn = s.movingIn.value || "";
+        movingInUpdatedAt = Number(s.movingIn.updatedAt) || 0;
+      }
+      if (s.music) {
+        music = { url: s.music.url || "" };
+        musicUpdatedAt = Number(s.music.updatedAt) || 0;
+      }
+      if (s.icon) {
+        iconUpdatedAt = Number(s.icon.updatedAt) || 0;
+        if (s.icon.icon180) {
+          saveLocalOnly(KEYS.icon, { icon180: s.icon.icon180, icon512: s.icon.icon512 || s.icon.icon180 });
+          applyAppIcons(getSavedIcon());
+        } else if (iconUpdatedAt) {
+          try { localStorage.removeItem(KEYS.icon); } catch (e) {}
+          applyAppIcons(null);
+        }
+      }
+      if (state.tombstones) {
+        localTombstones = {
+          notes: Object.assign({}, state.tombstones.notes || {}),
+          places: Object.assign({}, state.tombstones.places || {}),
+          milestones: Object.assign({}, state.tombstones.milestones || {}),
+          photos: Object.assign({}, state.tombstones.photos || {}),
+        };
+      }
+      saveLocalOnly(KEYS.years, years);
+      saveLocalOnly(KEYS.movingIn, movingIn);
+      saveLocalOnly(KEYS.milestones, milestones);
+      saveLocalOnly(KEYS.places, places);
+      saveLocalOnly(KEYS.music, music);
+      saveLocalOnly(KEYS.notes, notes);
+      photos.forEach((p) => {
+        if (p.dataUrl) idbPutPhoto(p).catch(() => {});
+      });
+    }
+
+    function schedulePush() {
+      if (!getToken() || !remoteReady) return;
+      pushQueued = true;
+      if (!pushing) flushPush();
+    }
+
+    async function flushPush() {
+      if (!pushQueued || pushing || !getToken()) return;
+      pushing = true;
+      pushQueued = false;
+      setSyncStatus("Saving…");
+      try {
+        await retryPendingUploads();
+        const res = await apiFetch("/api/state", { method: "PUT", body: JSON.stringify(buildOutgoingState()) });
+        if (!res.ok) {
+          if (res.status !== 401) setSyncStatus("Couldn't sync — will retry");
+          pushQueued = true;
+          return;
+        }
+        const data = await res.json();
+        applyRemoteState(data);
+        setSyncStatus("Saved just now");
+      } catch (e) {
+        setSyncStatus("Couldn't sync — will retry");
+        pushQueued = true;
+      } finally {
+        pushing = false;
+        if (pushQueued) setTimeout(flushPush, 500);
+      }
+    }
+
+    async function pullState() {
+      if (!getToken() || !remoteReady || pushing || pushQueued) return;
+      try {
+        await retryPendingUploads();
+        const res = await apiFetch("/api/state");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Number(data.version) !== Number(remoteVersion)) {
+          applyRemoteState(data);
+          renderAll();
+          hydratePhotos();
+        }
+        setSyncStatus("Shared vault is up to date");
+      } catch (e) {}
+    }
+
+    async function uploadPhoto(photo) {
+      if (!getToken() || !photo || !photo.dataUrl || String(photo.dataUrl).indexOf("data:image/") !== 0) {
+        return false;
+      }
+      photo.updatedAt = Date.now();
+      const res = await apiFetch("/api/photo", {
+        method: "POST",
+        body: JSON.stringify({ id: photo.id, image: photo.dataUrl, meta: photoMetaOnly(photo) }),
+      });
+      if (!res.ok) {
+        pendingUploads[photo.id] = true;
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Upload failed");
+      }
+      const data = await res.json();
+      delete pendingUploads[photo.id];
+      if (data.state) applyRemoteState(data.state);
+      else if (data.version) remoteVersion = data.version;
+      return true;
+    }
+
+    async function retryPendingUploads() {
+      const ids = Object.keys(pendingUploads);
+      for (let i = 0; i < ids.length; i++) {
+        const photo = photos.find((p) => p.id === ids[i]);
+        if (!photo || !photo.dataUrl) continue;
+        try { await uploadPhoto(photo); } catch (e) {}
+      }
+    }
+
+    async function deletePhotoRemote(id) {
+      localTombstones.photos[id] = Date.now();
+      if (!getToken()) return;
+      const res = await apiFetch("/api/photo?id=" + encodeURIComponent(id), { method: "DELETE" });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && data.state) applyRemoteState(data.state);
+      } else {
+        schedulePush();
+      }
+    }
+
+    function snapshotLocalForMigrate() {
+      return {
+        notes: notes.slice(),
+        places: places.slice(),
+        milestones: milestones.slice(),
+        photos: photos.slice(),
+        years: { dating: years.dating || "", anniversary: years.anniversary || "" },
+        movingIn: movingIn || "",
+        music: { url: (music && music.url) || "" },
+        icon: getSavedIcon(),
+      };
+    }
+
+    function localHasItems(snap) {
+      if (!snap) return false;
+      return !!(
+        (snap.notes && snap.notes.length) ||
+        (snap.places && snap.places.length) ||
+        (snap.milestones && snap.milestones.length) ||
+        (snap.photos && snap.photos.length) ||
+        snap.movingIn ||
+        (snap.music && snap.music.url) ||
+        (snap.icon && snap.icon.icon180) ||
+        (snap.years && (snap.years.dating || snap.years.anniversary))
+      );
+    }
+
+    function missingFromRemote(snap, remote) {
+      if (!snap) return false;
+      const rNotes = idsMap(remote && remote.notes);
+      const rPlaces = idsMap(remote && remote.places);
+      const rMs = idsMap(remote && remote.milestones);
+      const rPhotos = idsMap(remote && remote.photos);
+      if ((snap.notes || []).some((n) => n && n.id && !rNotes[n.id])) return true;
+      if ((snap.places || []).some((n) => n && n.id && !rPlaces[n.id])) return true;
+      if ((snap.milestones || []).some((n) => n && n.id && !rMs[n.id])) return true;
+      if ((snap.photos || []).some((n) => n && n.id && n.dataUrl && !rPhotos[n.id])) return true;
+      const rs = (remote && remote.settings) || {};
+      if (snap.movingIn && !(rs.movingIn && rs.movingIn.value)) return true;
+      if (snap.music && snap.music.url && !(rs.music && rs.music.url)) return true;
+      if (snap.icon && snap.icon.icon180 && !(rs.icon && rs.icon.icon180)) return true;
+      if (snap.years && (snap.years.dating || snap.years.anniversary) &&
+          !(rs.years && (rs.years.dating || rs.years.anniversary))) return true;
+      return false;
+    }
+
+    function maybeShowMigrate(snap, remote) {
+      const banner = $("#migrate-banner");
+      if (!banner) return;
+      if (!snap || !localHasItems(snap) || !missingFromRemote(snap, remote)) {
+        banner.hidden = true;
+        pendingMigrate = null;
+        return;
+      }
+      pendingMigrate = snap;
+      banner.hidden = false;
+    }
+
+    async function migrateLocalToShared() {
+      const snap = pendingMigrate;
+      if (!snap) return;
+      const btn = $("#btn-migrate");
+      if (btn) { btn.disabled = true; btn.textContent = "Uploading…"; }
+      try {
+        const noteIds = idsMap(notes);
+        (snap.notes || []).forEach((n) => {
+          if (n && n.id && !noteIds[n.id]) {
+            n.updatedAt = n.updatedAt || n.createdAt || Date.now();
+            notes.push(n);
+          }
+        });
+        const placeIds = idsMap(places);
+        (snap.places || []).forEach((n) => {
+          if (n && n.id && !placeIds[n.id]) {
+            n.updatedAt = n.updatedAt || n.createdAt || Date.now();
+            places.push(n);
+          }
+        });
+        const msIds = idsMap(milestones);
+        (snap.milestones || []).forEach((n) => {
+          if (n && n.id && !msIds[n.id]) {
+            n.updatedAt = n.updatedAt || Date.now();
+            milestones.push(n);
+          }
+        });
+        if (!(years.dating || years.anniversary) && snap.years && (snap.years.dating || snap.years.anniversary)) {
+          years = { dating: snap.years.dating || "", anniversary: snap.years.anniversary || "" };
+          yearsUpdatedAt = Date.now();
+        }
+        if (!movingIn && snap.movingIn) { movingIn = snap.movingIn; movingInUpdatedAt = Date.now(); }
+        if (!(music && music.url) && snap.music && snap.music.url) { music = { url: snap.music.url }; musicUpdatedAt = Date.now(); }
+        if (!getSavedIcon() && snap.icon && snap.icon.icon180) {
+          saveLocalOnly(KEYS.icon, snap.icon);
+          applyAppIcons(snap.icon);
+          iconUpdatedAt = Date.now();
+        }
+        saveLocalOnly(KEYS.notes, notes);
+        saveLocalOnly(KEYS.places, places);
+        saveLocalOnly(KEYS.milestones, milestones);
+        saveLocalOnly(KEYS.years, years);
+        saveLocalOnly(KEYS.movingIn, movingIn);
+        saveLocalOnly(KEYS.music, music);
+
+        const photoIds = idsMap(photos);
+        const toUpload = (snap.photos || []).filter((p) => p && p.id && p.dataUrl && !photoIds[p.id] && !localTombstones.photos[p.id]);
+        for (let i = 0; i < toUpload.length; i++) {
+          setSyncStatus("Uploading photo " + (i + 1) + " of " + toUpload.length + "…");
+          if (!photos.find((p) => p.id === toUpload[i].id)) photos = [toUpload[i]].concat(photos);
+          try { await idbPutPhoto(toUpload[i]); } catch (e) {}
+          await uploadPhoto(toUpload[i]);
+        }
+        pushQueued = true;
+        await flushPush();
+        renderAll();
+        pendingMigrate = null;
+        const banner = $("#migrate-banner");
+        if (banner) banner.hidden = true;
+        toast("Your memories are now in the shared vault.");
+        setSyncStatus("Shared vault is up to date");
+      } catch (e) {
+        console.warn(e);
+        toast("Some memories could not be uploaded. Please try again.");
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "Upload my existing memories to the shared vault"; }
+      }
+    }
+
+    async function hydratePhotos() {
+      if (hydratingPhotos) return;
+      hydratingPhotos = true;
+      let changed = false;
+      try {
+        for (let i = 0; i < photos.length; i++) {
+          const p = photos[i];
+          if (p.dataUrl) continue;
+          if (!getToken()) break;
+          try {
+            const res = await apiFetch("/api/photo?id=" + encodeURIComponent(p.id));
+            if (!res.ok) continue;
+            const blob = await res.blob();
+            const dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+            p.dataUrl = dataUrl;
+            changed = true;
+            try { await idbPutPhoto(p); } catch (e) {}
+            const img = document.querySelector('.polaroid[data-id="' + CSS.escape(p.id) + '"] img');
+            if (img) {
+              img.src = dataUrl;
+              img.classList.remove("photo-pending");
+            }
+          } catch (e) {}
+        }
+      } finally {
+        hydratingPhotos = false;
+        if (changed) {
+          const grid = $("#icon-pick-grid");
+          if (grid && !grid.hidden) renderIconGalleryPick();
+        }
+      }
+    }
+
+    async function afterLogin(localSnap) {
+      setSyncStatus("Loading shared memories…");
+      const res = await apiFetch("/api/state");
+      if (!res.ok) throw new Error("Could not load the shared vault");
+      const data = await res.json();
+      applyRemoteState(data);
+      remoteReady = true;
+      renderAll();
+      hydratePhotos();
+      maybeShowMigrate(localSnap, data);
+      setSyncStatus("Shared vault is up to date");
+    }
+
+    async function submitLogin() {
+      const input = $("#login-pass");
+      const password = ((input && input.value) || "").trim();
+      if (!password) { showLogin("Please enter the family password."); return; }
+      const btn = $("#login-btn");
+      if (btn) btn.disabled = true;
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: password }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.token) {
+          showLogin(data.error || "Wrong password");
+          return;
+        }
+        if (input) input.value = "";
+        setToken(data.token);
+        hideLogin();
+        const snap = snapshotLocalForMigrate();
+        await afterLogin(snap);
+        photos.forEach((p) => {
+          if (typeof p.lat === "number" && typeof p.lon === "number" && !p.place) scheduleGeocode(p);
+        });
+      } catch (e) {
+        showLogin("Could not reach the vault. Check your connection and try again.");
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
 
     function showSection(id) {
       $$(".section").forEach((s) => s.classList.toggle("active", s.dataset.sec === id));
@@ -1357,7 +1866,9 @@
           if (name) {
             current.place = name;
             current.placeSource = "geo";
+            current.updatedAt = Date.now();
             try { await idbPutPhoto(current); } catch (e) {}
+            schedulePush();
             renderPhotos();
           }
         } catch (e) {
@@ -1414,7 +1925,7 @@
         return '<figure class="polaroid" data-id="' + escapeHtml(p.id) + '" style="transform: rotate(' + (p.rotation || 0) + 'deg)">' +
           '<span class="num">' + escapeHtml(label) + "</span>" +
           '<button class="del" type="button" data-del="' + escapeHtml(p.id) + '" aria-label="Delete photo">×</button>' +
-          '<img src="' + p.dataUrl + '" alt="' + escapeHtml(cap) + '" data-open="' + escapeHtml(p.id) + '" />' +
+          '<img src="' + (p.dataUrl || "") + '" alt="' + escapeHtml(cap) + '" data-open="' + escapeHtml(p.id) + '" class="' + (p.dataUrl ? "" : "photo-pending") + '" />' +
           '<figcaption class="polaroid-foot">' +
             '<input class="cap" data-cap="' + escapeHtml(p.id) + '" value="' + escapeHtml(cap) + '" placeholder="' + escapeHtml(label) + '" maxlength="60" />' +
             '<div class="photo-meta">' +
@@ -1448,11 +1959,13 @@
         try {
           const meta = await readPhotoMeta(images[i]);
           const dataUrl = await compressImage(images[i], 1000, 0.7);
+          const nowTs = Date.now();
           const item = {
             id: uid(),
             dataUrl: dataUrl,
             caption: "",
-            createdAt: Date.now(),
+            createdAt: nowTs,
+            updatedAt: nowTs,
             rotation: Math.round((Math.random() * 6 - 3) * 10) / 10,
             takenAt: meta.takenAt || null,
             takenAtApprox: !!meta.takenAtApprox,
@@ -1467,6 +1980,14 @@
             sortPhotos();
             renderPhotos();
             scheduleGeocode(item);
+            if (getToken()) {
+              try { await uploadPhoto(item); }
+              catch (upErr) {
+                console.warn(upErr);
+                pendingUploads[item.id] = true;
+                toast("Photo saved on this phone, but could not reach the shared vault yet.");
+              }
+            }
           } catch (err) {
             photos = photos.filter((p) => p.id !== item.id);
             console.warn(err);
@@ -1502,6 +2023,7 @@
           photos = photos.filter((p) => p.id !== id);
           renderPhotos();
           idbDeletePhoto(id).then(() => {
+            deletePhotoRemote(id).catch((e) => console.warn(e));
             toast("Photo removed.");
           }).catch((err) => {
             console.warn(err);
@@ -1528,7 +2050,8 @@
         const prevCaption = photo.caption;
         const raw = cap.value.slice(0, 60);
         photo.caption = isAutoCaption(raw) ? "" : raw.trim();
-        idbPutPhoto(photo).then(() => renderPhotos()).catch((err) => {
+        photo.updatedAt = Date.now();
+        idbPutPhoto(photo).then(() => { renderPhotos(); schedulePush(); }).catch((err) => {
           console.warn(err);
           photo.caption = prevCaption;
           renderPhotos();
@@ -1557,8 +2080,9 @@
           photo.takenAtApprox = false;
         }
         photo.takenAtSource = "manual";
+        photo.updatedAt = Date.now();
         sortPhotos();
-        idbPutPhoto(photo).then(() => renderPhotos()).catch((err) => {
+        idbPutPhoto(photo).then(() => { renderPhotos(); schedulePush(); }).catch((err) => {
           console.warn(err);
           photo.takenAt = prevAt;
           photo.takenAtApprox = prevApprox;
@@ -1575,7 +2099,8 @@
         const prevSource = photo.placeSource;
         photo.place = stripPlacePin(placeEl.value).slice(0, 80);
         photo.placeSource = "manual";
-        idbPutPhoto(photo).then(() => renderPhotos()).catch((err) => {
+        photo.updatedAt = Date.now();
+        idbPutPhoto(photo).then(() => { renderPhotos(); schedulePush(); }).catch((err) => {
           console.warn(err);
           photo.place = prevPlace;
           photo.placeSource = prevSource;
@@ -1715,6 +2240,7 @@
       if (e.target.id === "moving-in") {
         const prev = movingIn;
         movingIn = e.target.value;
+        movingInUpdatedAt = Date.now();
         if (!save(KEYS.movingIn, movingIn)) movingIn = prev;
         renderTimeline();
       }
@@ -1724,13 +2250,16 @@
       if (e.target.id === "moving-clear") {
         const prev = movingIn;
         movingIn = "";
+        movingInUpdatedAt = Date.now();
         if (!save(KEYS.movingIn, movingIn)) movingIn = prev;
         renderTimeline();
       }
       const del = e.target.closest("[data-ms-del]");
       if (del) {
         const prev = milestones;
-        milestones = milestones.filter((m) => m.id !== del.dataset.msDel);
+        const delId = del.dataset.msDel;
+        milestones = milestones.filter((m) => m.id !== delId);
+        localTombstones.milestones[delId] = Date.now();
         if (!save(KEYS.milestones, milestones)) {
           milestones = prev;
           renderTimeline();
@@ -1746,7 +2275,7 @@
       const date = $("#ms-date").value;
       if (!title) { toast("Give your milestone a title."); return; }
       if (!date) { toast("Please add a date."); return; }
-      const item = { id: uid(), title: title, date: date };
+      const item = { id: uid(), title: title, date: date, createdAt: Date.now(), updatedAt: Date.now() };
       milestones.push(item);
       if (!save(KEYS.milestones, milestones)) {
         milestones = milestones.filter((m) => m.id !== item.id);
@@ -1827,6 +2356,7 @@
     $("#pl-save").addEventListener("click", () => {
       const name = $("#pl-name").value.trim();
       if (!name) { toast("Please add a name for this place."); return; }
+      const existing = editingPlaceId ? places.find((p) => p.id === editingPlaceId) : null;
       const entry = {
         id: editingPlaceId || uid(),
         name: name,
@@ -1835,6 +2365,8 @@
         location: $("#pl-loc").value.trim(),
         notes: $("#pl-notes").value.trim(),
         rating: placeRating,
+        createdAt: (existing && existing.createdAt) || Date.now(),
+        updatedAt: Date.now(),
       };
       const prev = places;
       const wasEditing = !!editingPlaceId;
@@ -1859,7 +2391,9 @@
       if (del) {
         if (!confirm("Delete this place?")) return;
         const prev = places;
-        places = places.filter((p) => p.id !== del.dataset.plDel);
+        const delId = del.dataset.plDel;
+        places = places.filter((p) => p.id !== delId);
+        localTombstones.places[delId] = Date.now();
         if (!save(KEYS.places, places)) {
           places = prev;
           renderPlaces();
@@ -1930,6 +2464,7 @@
     }
 
     $("#music-save").addEventListener("click", () => {
+      musicUpdatedAt = Date.now();
       const url = $("#music-url").value.trim();
       if (!url) { toast("Paste a Spotify or Apple Music link first."); return; }
       const embed = toEmbedUrl(url);
@@ -1948,6 +2483,7 @@
       toast("Playlist saved.");
     });
     $("#music-clear").addEventListener("click", () => {
+      musicUpdatedAt = Date.now();
       const prev = music;
       music = { url: "" };
       if (!save(KEYS.music, music)) {
@@ -1999,6 +2535,7 @@
         author: $("#note-author").value,
         text: text,
         createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
       notes.push(item);
       if (!save(KEYS.notes, notes)) {
@@ -2025,7 +2562,9 @@
       if (!del) return;
       if (!confirm("Delete this note?")) return;
       const prev = notes;
-      notes = notes.filter((n) => n.id !== del.dataset.noteDel);
+      const delId = del.dataset.noteDel;
+      notes = notes.filter((n) => n.id !== delId);
+      localTombstones.notes[delId] = Date.now();
       if (!save(KEYS.notes, notes)) {
         notes = prev;
         renderNotes();
@@ -2094,6 +2633,7 @@
       const icon180 = cropSquareToPng(img, 180);
       const icon512 = cropSquareToPng(img, 512);
       let data = { icon180: icon180, icon512: icon512 };
+      iconUpdatedAt = Date.now();
       if (!save(KEYS.icon, data)) {
         data = { icon180: icon180 };
         if (!save(KEYS.icon, data)) return false;
@@ -2105,7 +2645,9 @@
 
     function resetAppIcon() {
       try { localStorage.removeItem(KEYS.icon); } catch (e) {}
+      iconUpdatedAt = Date.now();
       applyAppIcons(null);
+      schedulePush();
       toast("Default icon restored. Add the page to your Home Screen again to use it.");
     }
 
@@ -2119,7 +2661,7 @@
       grid.hidden = false;
       grid.innerHTML = photos.map(function (p) {
         return '<button type="button" data-icon-photo="' + escapeHtml(p.id) + '" aria-label="Use this photo as the app icon">' +
-          '<img src="' + p.dataUrl + '" alt="" />' +
+          '<img src="' + (p.dataUrl || "") + '" alt="" />' +
           "</button>";
       }).join("");
     }
@@ -2241,6 +2783,16 @@
             return;
           }
           toast("Backup imported.");
+          if (getToken()) {
+            (async () => {
+              for (let i = 0; i < photos.length; i++) {
+                if (photos[i] && photos[i].dataUrl) {
+                  try { await uploadPhoto(photos[i]); } catch (e) { pendingUploads[photos[i].id] = true; }
+                }
+              }
+              schedulePush();
+            })();
+          }
         } catch (err) {
           toast("Could not read that backup file.");
         }
@@ -2279,6 +2831,20 @@
       document.body.dataset.storageReady = "1";
       renderPhotos();
       renderTodayChrome();
+      if (!getToken()) {
+        showLogin();
+        return;
+      }
+      try {
+        const snap = snapshotLocalForMigrate();
+        await afterLogin(snap);
+      } catch (err) {
+        console.warn(err);
+        if (getToken()) {
+          toast("Could not load the shared vault. Showing memories saved on this phone.");
+          setSyncStatus("Offline — will retry");
+        }
+      }
       photos.forEach((p) => {
         if (typeof p.lat === "number" && typeof p.lon === "number" && !p.place) scheduleGeocode(p);
       });
@@ -2286,12 +2852,20 @@
 
     const storageReady = boot();
     setInterval(updateTicksOnly, 1000);
+    setInterval(() => { if (!document.hidden) pullState(); }, 30000);
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
         renderTodayChrome();
         renderAllCountdowns();
+        pullState();
       }
     });
+    window.addEventListener("focus", () => { pullState(); });
+    $("#login-btn").addEventListener("click", submitLogin);
+    $("#login-pass").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submitLogin();
+    });
+    $("#btn-migrate").addEventListener("click", migrateLocalToShared);
   })();
   </script>
 </body>
