@@ -604,10 +604,6 @@
       }
     }
 
-    function save(key, value) {
-      localStorage.setItem(key, JSON.stringify(value));
-    }
-
     function isQuotaError(err) {
       return err && (err.name === "QuotaExceededError" || err.code === 22 || err.code === 1014);
     }
@@ -621,7 +617,119 @@
       toastTimer = setTimeout(() => el.classList.remove("show"), 3800);
     }
 
-    let photos = load(KEYS.photos, []);
+    function save(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+      } catch (err) {
+        if (isQuotaError(err)) {
+          toast("Storage is full. Delete some items, or export a backup first.");
+        } else {
+          toast("Could not save. Please try again.");
+        }
+        return false;
+      }
+    }
+
+    const IDB_NAME = "memory-vault";
+    const IDB_STORE = "photos";
+    const IDB_VERSION = 1;
+
+    function idbOpen() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE, { keyPath: "id" });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error("indexedDB open failed"));
+      });
+    }
+
+    async function idbAllPhotos() {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, "readonly");
+        const req = tx.objectStore(IDB_STORE).getAll();
+        req.onsuccess = () => {
+          const list = req.result || [];
+          list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          resolve(list);
+        };
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbPutPhoto(photo) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, "readwrite");
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.objectStore(IDB_STORE).put(photo);
+      });
+    }
+
+    async function idbDeletePhoto(id) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, "readwrite");
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.objectStore(IDB_STORE).delete(id);
+      });
+    }
+
+    async function idbReplaceAllPhotos(list) {
+      const db = await idbOpen();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, "readwrite");
+        const store = tx.objectStore(IDB_STORE);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        const clearReq = store.clear();
+        clearReq.onsuccess = () => {
+          (list || []).forEach((p) => store.put(p));
+        };
+        clearReq.onerror = () => reject(clearReq.error);
+      });
+    }
+
+    async function migratePhotosFromLocalStorage() {
+      let legacy = null;
+      try {
+        const raw = localStorage.getItem(KEYS.photos);
+        if (raw) legacy = JSON.parse(raw);
+      } catch (e) {
+        legacy = null;
+      }
+      if (Array.isArray(legacy) && legacy.length) {
+        const existing = await idbAllPhotos();
+        if (!existing.length) {
+          await idbReplaceAllPhotos(legacy);
+        } else {
+          const ids = {};
+          existing.forEach((p) => { ids[p.id] = true; });
+          for (let i = 0; i < legacy.length; i++) {
+            if (legacy[i] && legacy[i].id && !ids[legacy[i].id]) {
+              await idbPutPhoto(legacy[i]);
+            }
+          }
+        }
+      }
+      try { localStorage.removeItem(KEYS.photos); } catch (e) {}
+    }
+
+    async function requestPersistentStorage() {
+      if (navigator.storage && navigator.storage.persist) {
+        try { await navigator.storage.persist(); } catch (e) {}
+      }
+    }
+
+    let photos = [];
     let years = load(KEYS.years, { dating: "", anniversary: "" });
     let movingIn = load(KEYS.movingIn, "");
     let milestones = load(KEYS.milestones, []);
@@ -631,6 +739,7 @@
     let placeFilter = "all";
     let editingPlaceId = null;
     let placeRating = 0;
+    let photosReady = false;
 
     function showSection(id) {
       $$(".section").forEach((s) => s.classList.toggle("active", s.dataset.sec === id));
@@ -940,17 +1049,16 @@
           };
           photos = [item].concat(photos);
           try {
-            save(KEYS.photos, photos);
+            await idbPutPhoto(item);
             added++;
+            renderPhotos();
           } catch (err) {
             photos = photos.filter((p) => p.id !== item.id);
-            if (isQuotaError(err)) {
-              toast("Storage is full. This device cannot keep more photos here. Delete a few, or export a backup first.");
-              status.textContent = "Stopped — storage is full.";
-              renderPhotos();
-              return;
-            }
-            throw err;
+            console.warn(err);
+            toast("Could not save this photo. Try a smaller picture, or delete a few first.");
+            status.textContent = "Stopped — could not save this photo.";
+            renderPhotos();
+            return;
           }
         } catch (err) {
           console.warn(err);
@@ -974,10 +1082,17 @@
         e.stopPropagation();
         const id = del.dataset.del;
         if (confirm("Remove this photo from the vault?")) {
+          const prev = photos;
           photos = photos.filter((p) => p.id !== id);
-          try { save(KEYS.photos, photos); } catch (err) {}
           renderPhotos();
-          toast("Photo removed.");
+          idbDeletePhoto(id).then(() => {
+            toast("Photo removed.");
+          }).catch((err) => {
+            console.warn(err);
+            photos = prev;
+            renderPhotos();
+            toast("Could not remove the photo. Please try again.");
+          });
         }
         return;
       }
@@ -990,10 +1105,14 @@
       if (!cap) return;
       const photo = photos.find((p) => p.id === cap.dataset.cap);
       if (!photo) return;
+      const prevCaption = photo.caption;
       photo.caption = cap.value.slice(0, 60);
-      try { save(KEYS.photos, photos); } catch (err) {
-        if (isQuotaError(err)) toast("Could not save the caption — storage is full.");
-      }
+      idbPutPhoto(photo).catch((err) => {
+        console.warn(err);
+        photo.caption = prevCaption;
+        cap.value = prevCaption || "";
+        toast("Could not save the caption. Please try again.");
+      });
     });
 
     function openLightbox(id) {
@@ -1097,35 +1216,44 @@
 
     $("#timeline").addEventListener("change", (e) => {
       if (e.target.id === "year-dating") {
+        const prev = years.dating;
         years.dating = e.target.value.trim();
-        save(KEYS.years, years);
+        if (!save(KEYS.years, years)) years.dating = prev;
         renderTimeline();
         renderAllCountdowns();
       }
       if (e.target.id === "year-anniv") {
+        const prev = years.anniversary;
         years.anniversary = e.target.value.trim();
-        save(KEYS.years, years);
+        if (!save(KEYS.years, years)) years.anniversary = prev;
         renderTimeline();
         renderAllCountdowns();
         renderTodayChrome();
       }
       if (e.target.id === "moving-in") {
+        const prev = movingIn;
         movingIn = e.target.value;
-        save(KEYS.movingIn, movingIn);
+        if (!save(KEYS.movingIn, movingIn)) movingIn = prev;
         renderTimeline();
       }
     });
 
     $("#timeline").addEventListener("click", (e) => {
       if (e.target.id === "moving-clear") {
+        const prev = movingIn;
         movingIn = "";
-        save(KEYS.movingIn, movingIn);
+        if (!save(KEYS.movingIn, movingIn)) movingIn = prev;
         renderTimeline();
       }
       const del = e.target.closest("[data-ms-del]");
       if (del) {
+        const prev = milestones;
         milestones = milestones.filter((m) => m.id !== del.dataset.msDel);
-        save(KEYS.milestones, milestones);
+        if (!save(KEYS.milestones, milestones)) {
+          milestones = prev;
+          renderTimeline();
+          return;
+        }
         renderTimeline();
         toast("Milestone removed.");
       }
@@ -1136,8 +1264,13 @@
       const date = $("#ms-date").value;
       if (!title) { toast("Give your milestone a title."); return; }
       if (!date) { toast("Please add a date."); return; }
-      milestones.push({ id: uid(), title: title, date: date });
-      save(KEYS.milestones, milestones);
+      const item = { id: uid(), title: title, date: date };
+      milestones.push(item);
+      if (!save(KEYS.milestones, milestones)) {
+        milestones = milestones.filter((m) => m.id !== item.id);
+        renderTimeline();
+        return;
+      }
       $("#ms-title").value = "";
       $("#ms-date").value = "";
       renderTimeline();
@@ -1221,16 +1354,21 @@
         notes: $("#pl-notes").value.trim(),
         rating: placeRating,
       };
-      if (editingPlaceId) {
+      const prev = places;
+      const wasEditing = !!editingPlaceId;
+      if (wasEditing) {
         places = places.map((p) => (p.id === editingPlaceId ? entry : p));
-        toast("Place updated.");
       } else {
         places = [entry].concat(places);
-        toast("Place saved.");
       }
-      save(KEYS.places, places);
+      if (!save(KEYS.places, places)) {
+        places = prev;
+        renderPlaces();
+        return;
+      }
       resetPlaceForm();
       renderPlaces();
+      toast(wasEditing ? "Place updated." : "Place saved.");
     });
     $("#pl-cancel").addEventListener("click", resetPlaceForm);
 
@@ -1238,8 +1376,13 @@
       const del = e.target.closest("[data-pl-del]");
       if (del) {
         if (!confirm("Delete this place?")) return;
+        const prev = places;
         places = places.filter((p) => p.id !== del.dataset.plDel);
-        save(KEYS.places, places);
+        if (!save(KEYS.places, places)) {
+          places = prev;
+          renderPlaces();
+          return;
+        }
         if (editingPlaceId === del.dataset.plDel) resetPlaceForm();
         renderPlaces();
         toast("Place removed.");
@@ -1312,14 +1455,24 @@
         toast("Please use a full open.spotify.com or music.apple.com link.");
         return;
       }
+      const prev = music;
       music = { url: url, embed: embed };
-      save(KEYS.music, music);
+      if (!save(KEYS.music, music)) {
+        music = prev;
+        renderMusic();
+        return;
+      }
       renderMusic();
       toast("Playlist saved.");
     });
     $("#music-clear").addEventListener("click", () => {
+      const prev = music;
       music = { url: "" };
-      save(KEYS.music, music);
+      if (!save(KEYS.music, music)) {
+        music = prev;
+        renderMusic();
+        return;
+      }
       renderMusic();
       toast("Player cleared.");
     });
@@ -1359,13 +1512,18 @@
     $("#note-save").addEventListener("click", () => {
       const text = $("#note-text").value.trim();
       if (!text) { toast("Write a little note first."); return; }
-      notes.push({
+      const item = {
         id: uid(),
         author: $("#note-author").value,
         text: text,
         createdAt: Date.now(),
-      });
-      save(KEYS.notes, notes);
+      };
+      notes.push(item);
+      if (!save(KEYS.notes, notes)) {
+        notes = notes.filter((n) => n.id !== item.id);
+        renderNotes();
+        return;
+      }
       $("#note-text").value = "";
       renderNotes();
       toast("Tucked into the jar.");
@@ -1384,8 +1542,13 @@
       const del = e.target.closest("[data-note-del]");
       if (!del) return;
       if (!confirm("Delete this note?")) return;
+      const prev = notes;
       notes = notes.filter((n) => n.id !== del.dataset.noteDel);
-      save(KEYS.notes, notes);
+      if (!save(KEYS.notes, notes)) {
+        notes = prev;
+        renderNotes();
+        return;
+      }
       renderNotes();
       toast("Note removed.");
     });
@@ -1404,7 +1567,8 @@
       };
     }
 
-    $("#btn-export").addEventListener("click", () => {
+    $("#btn-export").addEventListener("click", async () => {
+      try { await storageReady; } catch (e) {}
       const blob = new Blob([JSON.stringify(snapshot(), null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       const d = new Date();
@@ -1422,37 +1586,47 @@
       e.target.value = "";
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         try {
           const data = JSON.parse(reader.result);
           if (!data || typeof data !== "object") throw new Error("Invalid file");
           if (!confirm("Import this backup? It will replace the photos, places, notes, and other memories currently on this device.")) return;
-          photos = Array.isArray(data.photos) ? data.photos : [];
-          years = data.years && typeof data.years === "object"
+          const nextPhotos = Array.isArray(data.photos) ? data.photos : [];
+          const nextYears = data.years && typeof data.years === "object"
             ? { dating: data.years.dating || "", anniversary: data.years.anniversary || "" }
             : { dating: "", anniversary: "" };
-          movingIn = typeof data.movingIn === "string" ? data.movingIn : "";
-          milestones = Array.isArray(data.milestones) ? data.milestones : [];
-          places = Array.isArray(data.places) ? data.places : [];
-          music = data.music && typeof data.music === "object" ? data.music : { url: "" };
-          notes = Array.isArray(data.notes) ? data.notes : [];
+          const nextMovingIn = typeof data.movingIn === "string" ? data.movingIn : "";
+          const nextMilestones = Array.isArray(data.milestones) ? data.milestones : [];
+          const nextPlaces = Array.isArray(data.places) ? data.places : [];
+          const nextMusic = data.music && typeof data.music === "object" ? data.music : { url: "" };
+          const nextNotes = Array.isArray(data.notes) ? data.notes : [];
           try {
-            save(KEYS.photos, photos);
-            save(KEYS.years, years);
-            save(KEYS.movingIn, movingIn);
-            save(KEYS.milestones, milestones);
-            save(KEYS.places, places);
-            save(KEYS.music, music);
-            save(KEYS.notes, notes);
+            await idbReplaceAllPhotos(nextPhotos);
           } catch (err) {
-            if (isQuotaError(err)) {
-              toast("This backup is too large for this browser’s storage. Try importing fewer photos.");
-              return;
-            }
-            throw err;
+            console.warn(err);
+            toast("Photos could not be imported into this browser’s storage. Try fewer or smaller photos.");
+            return;
           }
+          try { localStorage.removeItem(KEYS.photos); } catch (e) {}
+          photos = nextPhotos;
+          years = nextYears;
+          movingIn = nextMovingIn;
+          milestones = nextMilestones;
+          places = nextPlaces;
+          music = nextMusic;
+          notes = nextNotes;
+          const ok = save(KEYS.years, years) &&
+            save(KEYS.movingIn, movingIn) &&
+            save(KEYS.milestones, milestones) &&
+            save(KEYS.places, places) &&
+            save(KEYS.music, music) &&
+            save(KEYS.notes, notes);
           resetPlaceForm();
           renderAll();
+          if (!ok) {
+            toast("The backup was imported, but some items could not be saved because storage is full.");
+            return;
+          }
           toast("Backup imported.");
         } catch (err) {
           toast("Could not read that backup file.");
@@ -1477,7 +1651,23 @@
       renderNotes();
     }
 
-    renderAll();
+    async function boot() {
+      await requestPersistentStorage();
+      renderAll();
+      try {
+        await migratePhotosFromLocalStorage();
+        photos = await idbAllPhotos();
+      } catch (err) {
+        console.warn(err);
+        toast("Could not load photos from this device’s storage.");
+      }
+      photosReady = true;
+      document.body.dataset.storageReady = "1";
+      renderPhotos();
+      renderTodayChrome();
+    }
+
+    const storageReady = boot();
     setInterval(updateTicksOnly, 1000);
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) {
