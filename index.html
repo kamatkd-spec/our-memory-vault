@@ -521,9 +521,9 @@
           <div id="drawn-note" style="margin-top:14px;"></div>
         </div>
       </div>
-      <h3 class="serif" style="margin:22px 0 10px;font-size:1.4rem;">All notes</h3>
-      <div class="notes-list" id="notes-list"></div>
-      <div class="empty" id="notes-empty">
+      <h3 class="serif" style="display:none;margin:22px 0 10px;font-size:1.4rem;">All notes</h3>
+      <div class="notes-list" id="notes-list" style="display:none"></div>
+      <div class="empty" id="notes-empty" style="display:none" data-hidden="1">
         <div class="big">The jar is waiting</div>
         <p>Write the first love note and drop it in.</p>
       </div>
@@ -1496,7 +1496,7 @@
     function renderNotes() {
       renderJar();
       const list = notes.slice().sort((a, b) => b.createdAt - a.createdAt);
-      $("#notes-empty").style.display = notes.length ? "none" : "block";
+      $("#notes-empty").style.display = "none";
       $("#notes-list").innerHTML = list.map((n) =>
         '<article class="note-mini">' +
           '<div class="by serif" style="color:var(--rose)">' + escapeHtml(n.author) + "</div>" +
