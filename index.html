@@ -223,6 +223,13 @@
     }
     .photo-place:focus { box-shadow: none; border-bottom: 1px dashed var(--blush-deep); }
     .photo-place::placeholder { color: var(--ink-faint); font-weight: 700; }
+    .polaroid .num {
+      position: absolute; top: 6px; left: 6px;
+      background: rgba(255, 252, 249, 0.94); color: var(--rose);
+      font-size: 0.68rem; font-weight: 800; letter-spacing: 0.01em;
+      padding: 3px 7px; border-radius: 999px; box-shadow: var(--shadow-soft);
+      z-index: 1; pointer-events: none; line-height: 1.2;
+    }
     .polaroid .del {
       position: absolute; top: 6px; right: 6px; width: 26px; height: 26px;
       border: 0; border-radius: 50%; background: rgba(255,255,255,0.9); color: var(--rose);
@@ -1002,6 +1009,35 @@
       photos.sort((a, b) => (b.takenAt || b.createdAt || 0) - (a.takenAt || a.createdAt || 0));
     }
 
+    function photoTime(p) {
+      return p.takenAt || p.createdAt || 0;
+    }
+
+    function photoNumbers() {
+      const ordered = photos.slice().sort((a, b) => {
+        const dt = photoTime(a) - photoTime(b);
+        if (dt !== 0) return dt;
+        const c = (a.createdAt || 0) - (b.createdAt || 0);
+        if (c !== 0) return c;
+        return String(a.id).localeCompare(String(b.id));
+      });
+      const map = {};
+      ordered.forEach((p, i) => { map[p.id] = i + 1; });
+      return map;
+    }
+
+    function photoLabel(n) {
+      return "Photo " + n;
+    }
+
+    function isAutoCaption(s) {
+      return !String(s || "").trim() || /^Photo\s*\d+$/i.test(String(s).trim());
+    }
+
+    function displayCaption(p, n) {
+      return isAutoCaption(p.caption) ? photoLabel(n) : p.caption;
+    }
+
     function _u16(view, i, le) { return view.getUint16(i, le); }
     function _u32(view, i, le) { return view.getUint32(i, le); }
     function _i32(view, i, le) { return view.getInt32(i, le); }
@@ -1325,14 +1361,19 @@
       const empty = $("#photos-empty");
       empty.style.display = photos.length ? "none" : "block";
       sortPhotos();
+      const nums = photoNumbers();
       wall.innerHTML = photos.map((p) => {
+        const n = nums[p.id];
+        const label = photoLabel(n);
+        const cap = displayCaption(p, n);
         const dateLabel = formatTakenDate(p.takenAt, p.takenAtApprox) || "Add date";
         const placeVal = placeDisplay(p);
         return '<figure class="polaroid" data-id="' + escapeHtml(p.id) + '" style="transform: rotate(' + (p.rotation || 0) + 'deg)">' +
+          '<span class="num">' + escapeHtml(label) + "</span>" +
           '<button class="del" type="button" data-del="' + escapeHtml(p.id) + '" aria-label="Delete photo">×</button>' +
-          '<img src="' + p.dataUrl + '" alt="' + escapeHtml(p.caption || "Photo") + '" data-open="' + escapeHtml(p.id) + '" />' +
+          '<img src="' + p.dataUrl + '" alt="' + escapeHtml(cap) + '" data-open="' + escapeHtml(p.id) + '" />' +
           '<figcaption class="polaroid-foot">' +
-            '<input class="cap" data-cap="' + escapeHtml(p.id) + '" value="' + escapeHtml(p.caption || "") + '" placeholder="Add a caption…" maxlength="60" />' +
+            '<input class="cap" data-cap="' + escapeHtml(p.id) + '" value="' + escapeHtml(cap) + '" placeholder="' + escapeHtml(label) + '" maxlength="60" />' +
             '<div class="photo-meta">' +
               '<label class="photo-date-wrap' + (p.takenAt ? "" : " is-empty") + '">' +
                 '<span>' + escapeHtml(dateLabel) + '</span>' +
@@ -1364,11 +1405,10 @@
         try {
           const meta = await readPhotoMeta(images[i]);
           const dataUrl = await compressImage(images[i], 1000, 0.7);
-          const base = (images[i].name || "photo").replace(/\.[^.]+$/, "").slice(0, 60);
           const item = {
             id: uid(),
             dataUrl: dataUrl,
-            caption: base,
+            caption: "",
             createdAt: Date.now(),
             rotation: Math.round((Math.random() * 6 - 3) * 10) / 10,
             takenAt: meta.takenAt || null,
@@ -1443,11 +1483,12 @@
         const photo = photos.find((p) => p.id === cap.dataset.cap);
         if (!photo) return;
         const prevCaption = photo.caption;
-        photo.caption = cap.value.slice(0, 60);
-        idbPutPhoto(photo).catch((err) => {
+        const raw = cap.value.slice(0, 60);
+        photo.caption = isAutoCaption(raw) ? "" : raw.trim();
+        idbPutPhoto(photo).then(() => renderPhotos()).catch((err) => {
           console.warn(err);
           photo.caption = prevCaption;
-          cap.value = prevCaption || "";
+          renderPhotos();
           toast("Could not save the caption. Please try again.");
         });
         return;
@@ -1504,9 +1545,12 @@
     function openLightbox(id) {
       const p = photos.find((x) => x.id === id);
       if (!p) return;
+      const n = photoNumbers()[p.id];
+      const label = n ? photoLabel(n) : "Photo";
+      const cap = displayCaption(p, n || "");
       $("#lightbox-img").src = p.dataUrl;
-      $("#lightbox-img").alt = p.caption || "Photo";
-      $("#lightbox-cap").textContent = p.caption || "";
+      $("#lightbox-img").alt = cap;
+      $("#lightbox-cap").textContent = (cap !== label && n) ? (label + " · " + cap) : label;
       const bits = [];
       const when = formatTakenDate(p.takenAt, p.takenAtApprox);
       if (when) bits.push(when);
