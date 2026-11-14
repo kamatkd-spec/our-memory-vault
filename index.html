@@ -195,18 +195,34 @@
       gap: 18px 14px; padding: 8px 4px 12px;
     }
     .polaroid {
-      background: #fff; padding: 10px 10px 36px;
+      background: #fff; padding: 10px 10px 12px;
       box-shadow: 0 8px 20px rgba(58,42,44,0.12); border-radius: 3px;
-      position: relative; transition: transform .2s ease, box-shadow .2s ease; cursor: pointer;
+      position: relative; transition: transform .2s ease, box-shadow .2s ease; cursor: default;
     }
     .polaroid:hover { z-index: 2; box-shadow: 0 14px 28px rgba(58,42,44,0.16); }
-    .polaroid img { width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--cream-deep); }
+    .polaroid img { width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--cream-deep); cursor: pointer; }
+    .polaroid-foot { margin-top: 8px; }
     .polaroid .cap {
-      position: absolute; left: 10px; right: 28px; bottom: 8px;
       font-family: var(--header-serif); font-style: italic; font-size: 0.95rem;
-      border: 0; background: transparent; width: auto; padding: 0; border-radius: 0; box-shadow: none;
+      border: 0; background: transparent; width: 100%; padding: 0; border-radius: 0; box-shadow: none;
     }
     .polaroid .cap:focus { box-shadow: none; border-bottom: 1px dashed var(--blush-deep); }
+    .photo-meta { margin-top: 3px; display: grid; gap: 1px; }
+    .photo-date-wrap {
+      position: relative; display: inline-block; max-width: 100%;
+      font-size: 0.72rem; color: var(--ink-soft); font-weight: 700; cursor: pointer; line-height: 1.3;
+    }
+    .photo-date-wrap.is-empty { color: var(--ink-faint); }
+    .photo-date-wrap input[type="date"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+      border: 0; padding: 0; background: transparent; box-shadow: none;
+    }
+    .photo-place {
+      width: 100%; border: 0; background: transparent; box-shadow: none; border-radius: 0;
+      padding: 0; font-size: 0.72rem; color: var(--ink-soft); font-weight: 700; line-height: 1.3;
+    }
+    .photo-place:focus { box-shadow: none; border-bottom: 1px dashed var(--blush-deep); }
+    .photo-place::placeholder { color: var(--ink-faint); font-weight: 700; }
     .polaroid .del {
       position: absolute; top: 6px; right: 6px; width: 26px; height: 26px;
       border: 0; border-radius: 50%; background: rgba(255,255,255,0.9); color: var(--rose);
@@ -547,6 +563,7 @@
     <figure>
       <img id="lightbox-img" alt="" />
       <figcaption id="lightbox-cap"></figcaption>
+      <div id="lightbox-meta" class="muted" style="color:#f3d0d3;text-align:center;margin-top:4px;font-size:0.9rem;"></div>
     </figure>
   </div>
 
@@ -656,7 +673,7 @@
         const req = tx.objectStore(IDB_STORE).getAll();
         req.onsuccess = () => {
           const list = req.result || [];
-          list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          list.sort((a, b) => (b.takenAt || b.createdAt || 0) - (a.takenAt || a.createdAt || 0));
           resolve(list);
         };
         req.onerror = () => reject(req.error);
@@ -980,6 +997,297 @@
       }
     }
 
+
+    function sortPhotos() {
+      photos.sort((a, b) => (b.takenAt || b.createdAt || 0) - (a.takenAt || a.createdAt || 0));
+    }
+
+    function _u16(view, i, le) { return view.getUint16(i, le); }
+    function _u32(view, i, le) { return view.getUint32(i, le); }
+    function _i32(view, i, le) { return view.getInt32(i, le); }
+    function _typeSize(type) {
+      return type === 3 ? 2 : type === 4 || type === 9 ? 4 : type === 5 || type === 10 ? 8 : 1;
+    }
+
+    function _readTagValue(view, tiffStart, valPtr, type, count, le) {
+      const size = _typeSize(type) * count;
+      const dataOff = size > 4 ? tiffStart + _u32(view, valPtr, le) : valPtr;
+      if (dataOff < 0 || dataOff >= view.byteLength) return null;
+      if (type === 2) {
+        const chars = [];
+        const n = Math.min(count, view.byteLength - dataOff);
+        for (let i = 0; i < n; i++) {
+          const c = view.getUint8(dataOff + i);
+          if (c === 0) break;
+          chars.push(c);
+        }
+        return String.fromCharCode.apply(null, chars);
+      }
+      if (type === 5 || type === 10) {
+        const out = [];
+        for (let i = 0; i < count; i++) {
+          const o = dataOff + i * 8;
+          if (o + 8 > view.byteLength) break;
+          const num = type === 10 ? _i32(view, o, le) : _u32(view, o, le);
+          const den = type === 10 ? _i32(view, o + 4, le) : _u32(view, o + 4, le);
+          out.push(den ? num / den : 0);
+        }
+        return out;
+      }
+      if (type === 3) {
+        const out = [];
+        for (let i = 0; i < count; i++) {
+          const o = dataOff + i * 2;
+          if (o + 2 > view.byteLength) break;
+          out.push(_u16(view, o, le));
+        }
+        return count === 1 ? out[0] : out;
+      }
+      if (type === 4) {
+        const out = [];
+        for (let i = 0; i < count; i++) {
+          const o = dataOff + i * 4;
+          if (o + 4 > view.byteLength) break;
+          out.push(_u32(view, o, le));
+        }
+        return count === 1 ? out[0] : out;
+      }
+      if (type === 1 || type === 7) {
+        const out = [];
+        for (let i = 0; i < count && dataOff + i < view.byteLength; i++) out.push(view.getUint8(dataOff + i));
+        return count === 1 ? out[0] : out;
+      }
+      return null;
+    }
+
+    function _readIFD(view, tiffStart, ifdOffset, le) {
+      const abs = tiffStart + ifdOffset;
+      if (abs < 0 || abs + 2 > view.byteLength) return { entries: {}, next: 0 };
+      const count = Math.min(_u16(view, abs, le), 256);
+      const entries = {};
+      for (let i = 0; i < count; i++) {
+        const p = abs + 2 + i * 12;
+        if (p + 12 > view.byteLength) break;
+        const tag = _u16(view, p, le);
+        const type = _u16(view, p + 2, le);
+        const cnt = _u32(view, p + 4, le);
+        entries[tag] = _readTagValue(view, tiffStart, p + 8, type, cnt, le);
+      }
+      const nextPos = abs + 2 + count * 12;
+      const next = nextPos + 4 <= view.byteLength ? _u32(view, nextPos, le) : 0;
+      return { entries: entries, next: next };
+    }
+
+    function _findExifTiffOffset(buf) {
+      const u8 = new Uint8Array(buf);
+      if (u8.length >= 4 && u8[0] === 0xFF && u8[1] === 0xD8) {
+        let offset = 2;
+        while (offset + 4 < u8.length) {
+          if (u8[offset] !== 0xFF) break;
+          const marker = u8[offset + 1];
+          if (marker === 0xDA || marker === 0xD9) break;
+          const size = (u8[offset + 2] << 8) | u8[offset + 3];
+          if (marker === 0xE1 && size >= 8) {
+            const start = offset + 4;
+            if (u8[start] === 0x45 && u8[start + 1] === 0x78 && u8[start + 2] === 0x69 && u8[start + 3] === 0x66 &&
+                u8[start + 4] === 0 && u8[start + 5] === 0) {
+              return start + 6;
+            }
+          }
+          if (size < 2) break;
+          offset += 2 + size;
+        }
+      }
+      const sig = [0x45, 0x78, 0x69, 0x66, 0x00, 0x00];
+      const max = Math.min(u8.length - 10, 2 * 1024 * 1024);
+      for (let i = 0; i < max; i++) {
+        let ok = true;
+        for (let j = 0; j < 6; j++) if (u8[i + j] !== sig[j]) { ok = false; break; }
+        if (ok) {
+          const tiff = i + 6;
+          if ((u8[tiff] === 0x49 && u8[tiff + 1] === 0x49) || (u8[tiff] === 0x4D && u8[tiff + 1] === 0x4D)) return tiff;
+        }
+      }
+      return -1;
+    }
+
+    function _parseExifDate(s) {
+      if (!s) return null;
+      const m = String(s).match(/^(\d{4}):(\d{2}):(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?/);
+      if (!m) return null;
+      const d = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+      const t = d.getTime();
+      return isNaN(t) ? null : t;
+    }
+
+    function _dmsToDeg(arr, ref) {
+      if (!arr || !arr.length) return null;
+      const d = arr[0] || 0;
+      const m = arr[1] || 0;
+      const s = arr[2] || 0;
+      let deg = d + m / 60 + s / 3600;
+      if (!isFinite(deg)) return null;
+      const r = String(ref || "").toUpperCase();
+      if (r === "S" || r === "W") deg = -deg;
+      return deg;
+    }
+
+    function parseExifBuffer(buf) {
+      const out = { takenAt: null, lat: null, lon: null };
+      try {
+        const tiffStart = _findExifTiffOffset(buf);
+        if (tiffStart < 0 || tiffStart + 8 > buf.byteLength) return out;
+        const view = new DataView(buf);
+        const b0 = view.getUint8(tiffStart);
+        const b1 = view.getUint8(tiffStart + 1);
+        const le = b0 === 0x49 && b1 === 0x49;
+        const be = b0 === 0x4D && b1 === 0x4D;
+        if (!le && !be) return out;
+        if (_u16(view, tiffStart + 2, le) !== 42) return out;
+        const ifd0off = _u32(view, tiffStart + 4, le);
+        const ifd0 = _readIFD(view, tiffStart, ifd0off, le);
+        const dateTime = ifd0.entries[0x0132];
+        let exifIFD = null;
+        if (typeof ifd0.entries[0x8769] === "number") exifIFD = _readIFD(view, tiffStart, ifd0.entries[0x8769], le);
+        let gpsIFD = null;
+        if (typeof ifd0.entries[0x8825] === "number") gpsIFD = _readIFD(view, tiffStart, ifd0.entries[0x8825], le);
+        const original = exifIFD && (exifIFD.entries[0x9003] || exifIFD.entries[0x9004]);
+        out.takenAt = _parseExifDate(original) || _parseExifDate(dateTime);
+        if (gpsIFD) {
+          const lat = _dmsToDeg(gpsIFD.entries[0x0002], gpsIFD.entries[0x0001]);
+          const lon = _dmsToDeg(gpsIFD.entries[0x0004], gpsIFD.entries[0x0003]);
+          if (lat != null && lon != null && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+            out.lat = lat;
+            out.lon = lon;
+          }
+        }
+      } catch (e) {
+        console.warn(e);
+      }
+      return out;
+    }
+
+    function readPhotoFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error("read failed"));
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    async function readPhotoMeta(file) {
+      const meta = { takenAt: null, takenAtApprox: false, lat: null, lon: null };
+      try {
+        const buf = await readPhotoFile(file);
+        const exif = parseExifBuffer(buf);
+        if (exif.takenAt) meta.takenAt = exif.takenAt;
+        if (exif.lat != null) meta.lat = exif.lat;
+        if (exif.lon != null) meta.lon = exif.lon;
+      } catch (e) {
+        console.warn(e);
+      }
+      if (!meta.takenAt && file && file.lastModified) {
+        meta.takenAt = file.lastModified;
+        meta.takenAtApprox = true;
+      }
+      return meta;
+    }
+
+    const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    function formatTakenDate(ms, approx) {
+      if (!ms) return "";
+      const d = new Date(ms);
+      if (isNaN(d.getTime())) return "";
+      const label = d.getDate() + " " + MONTHS_SHORT[d.getMonth()] + " " + d.getFullYear();
+      return approx ? ("≈ " + label) : label;
+    }
+    function toDateInputValue(ms) {
+      if (!ms) return "";
+      const d = new Date(ms);
+      if (isNaN(d.getTime())) return "";
+      return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    }
+    function placeDisplay(p) {
+      if (p.place) return p.place;
+      if (typeof p.lat === "number" && typeof p.lon === "number") {
+        return p.lat.toFixed(2) + ", " + p.lon.toFixed(2);
+      }
+      return "";
+    }
+
+    function geoCacheKey(lat, lon) {
+      return Number(lat).toFixed(3) + "," + Number(lon).toFixed(3);
+    }
+    function formatNominatimPlace(data) {
+      if (!data) return "";
+      const a = data.address || {};
+      const local = a.city || a.town || a.village || a.municipality || a.suburb || a.hamlet || a.county || data.name || "";
+      const country = a.country || "";
+      if (local && country) return local + ", " + country;
+      if (local) return local;
+      if (data.display_name) return String(data.display_name).split(",").slice(0, 2).join(",").replace(/\s+/g, " ").trim();
+      return "";
+    }
+
+    let lastGeoAt = 0;
+    const geoQueue = [];
+    let geoBusy = false;
+
+    async function reverseGeocode(lat, lon) {
+      const key = geoCacheKey(lat, lon);
+      const cache = load("mv.geocache", {});
+      if (cache && cache[key]) return cache[key];
+      const wait = 1000 - (Date.now() - lastGeoAt);
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      lastGeoAt = Date.now();
+      const url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" +
+        encodeURIComponent(lat) + "&lon=" + encodeURIComponent(lon) +
+        "&zoom=10&accept-language=en";
+      const res = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const name = formatNominatimPlace(data);
+      if (name) {
+        cache[key] = name;
+        save("mv.geocache", cache);
+      }
+      return name || null;
+    }
+
+    function scheduleGeocode(photo) {
+      if (!photo || typeof photo.lat !== "number" || typeof photo.lon !== "number") return;
+      if (photo.place && photo.placeSource === "manual") return;
+      geoQueue.push(photo.id);
+      pumpGeo();
+    }
+
+    async function pumpGeo() {
+      if (geoBusy) return;
+      geoBusy = true;
+      while (geoQueue.length) {
+        const id = geoQueue.shift();
+        const photo = photos.find((p) => p.id === id);
+        if (!photo || typeof photo.lat !== "number" || typeof photo.lon !== "number") continue;
+        if (photo.place && photo.placeSource === "manual") continue;
+        try {
+          const name = await reverseGeocode(photo.lat, photo.lon);
+          const current = photos.find((p) => p.id === id);
+          if (!current) continue;
+          if (current.place && current.placeSource === "manual") continue;
+          if (name) {
+            current.place = name;
+            current.placeSource = "geo";
+            try { await idbPutPhoto(current); } catch (e) {}
+            renderPhotos();
+          }
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+      geoBusy = false;
+    }
+
     function compressImage(file, maxSide, quality) {
       maxSide = maxSide || 1000;
       quality = quality == null ? 0.7 : quality;
@@ -1016,13 +1324,29 @@
       const wall = $("#polaroid-wall");
       const empty = $("#photos-empty");
       empty.style.display = photos.length ? "none" : "block";
-      wall.innerHTML = photos.map((p) =>
-        '<figure class="polaroid" data-id="' + escapeHtml(p.id) + '" style="transform: rotate(' + (p.rotation || 0) + 'deg)">' +
+      sortPhotos();
+      wall.innerHTML = photos.map((p) => {
+        const dateLabel = formatTakenDate(p.takenAt, p.takenAtApprox) || "Add date";
+        const placeVal = placeDisplay(p);
+        return '<figure class="polaroid" data-id="' + escapeHtml(p.id) + '" style="transform: rotate(' + (p.rotation || 0) + 'deg)">' +
           '<button class="del" type="button" data-del="' + escapeHtml(p.id) + '" aria-label="Delete photo">×</button>' +
           '<img src="' + p.dataUrl + '" alt="' + escapeHtml(p.caption || "Photo") + '" data-open="' + escapeHtml(p.id) + '" />' +
-          '<input class="cap" data-cap="' + escapeHtml(p.id) + '" value="' + escapeHtml(p.caption || "") + '" placeholder="Add a caption…" maxlength="60" />' +
-        "</figure>"
-      ).join("");
+          '<figcaption class="polaroid-foot">' +
+            '<input class="cap" data-cap="' + escapeHtml(p.id) + '" value="' + escapeHtml(p.caption || "") + '" placeholder="Add a caption…" maxlength="60" />' +
+            '<div class="photo-meta">' +
+              '<label class="photo-date-wrap' + (p.takenAt ? "" : " is-empty") + '">' +
+                '<span>' + escapeHtml(dateLabel) + '</span>' +
+                '<input type="date" data-date="' + escapeHtml(p.id) + '" value="' + escapeHtml(toDateInputValue(p.takenAt)) + '" aria-label="Photo date" />' +
+              '</label>' +
+              '<input class="photo-place" data-place="' + escapeHtml(p.id) + '" value="' + escapeHtml(placeVal) + '" placeholder="📍 Add place" maxlength="80" aria-label="Photo place" />' +
+            '</div>' +
+          '</figcaption>' +
+        "</figure>";
+      }).join("");
+      // Prefix a pin on known places without changing the stored value twice
+      $$(".photo-place").forEach((el) => {
+        if (el.value && el.value.indexOf("📍") !== 0) el.value = "📍 " + el.value;
+      });
       $("#stat-photos").textContent = photos.length;
     }
 
@@ -1038,6 +1362,7 @@
       for (let i = 0; i < images.length; i++) {
         status.textContent = "Preparing " + (i + 1) + " of " + images.length + "…";
         try {
+          const meta = await readPhotoMeta(images[i]);
           const dataUrl = await compressImage(images[i], 1000, 0.7);
           const base = (images[i].name || "photo").replace(/\.[^.]+$/, "").slice(0, 60);
           const item = {
@@ -1046,12 +1371,19 @@
             caption: base,
             createdAt: Date.now(),
             rotation: Math.round((Math.random() * 6 - 3) * 10) / 10,
+            takenAt: meta.takenAt || null,
+            takenAtApprox: !!meta.takenAtApprox,
+            lat: meta.lat,
+            lon: meta.lon,
+            place: "",
           };
           photos = [item].concat(photos);
           try {
             await idbPutPhoto(item);
             added++;
+            sortPhotos();
             renderPhotos();
+            scheduleGeocode(item);
           } catch (err) {
             photos = photos.filter((p) => p.id !== item.id);
             console.warn(err);
@@ -1066,7 +1398,8 @@
         }
       }
       renderPhotos();
-      status.textContent = added ? ("Added " + added + " photo" + (added === 1 ? "" : "s") + ".") : "";
+      const looking = geoQueue.length || geoBusy;
+      status.textContent = added ? ("Added " + added + " photo" + (added === 1 ? "" : "s") + (looking ? ". Looking up places…" : ".")) : "";
       if (added) toast("Added " + added + " photo" + (added === 1 ? "" : "s") + " to your vault.");
     }
 
@@ -1100,19 +1433,72 @@
       if (open) openLightbox(open.dataset.open);
     });
 
+    function stripPlacePin(s) {
+      return String(s || "").replace(/^\s*📍\s*/, "").trim();
+    }
+
     $("#polaroid-wall").addEventListener("change", (e) => {
       const cap = e.target.closest("[data-cap]");
-      if (!cap) return;
-      const photo = photos.find((p) => p.id === cap.dataset.cap);
-      if (!photo) return;
-      const prevCaption = photo.caption;
-      photo.caption = cap.value.slice(0, 60);
-      idbPutPhoto(photo).catch((err) => {
-        console.warn(err);
-        photo.caption = prevCaption;
-        cap.value = prevCaption || "";
-        toast("Could not save the caption. Please try again.");
-      });
+      if (cap) {
+        const photo = photos.find((p) => p.id === cap.dataset.cap);
+        if (!photo) return;
+        const prevCaption = photo.caption;
+        photo.caption = cap.value.slice(0, 60);
+        idbPutPhoto(photo).catch((err) => {
+          console.warn(err);
+          photo.caption = prevCaption;
+          cap.value = prevCaption || "";
+          toast("Could not save the caption. Please try again.");
+        });
+        return;
+      }
+      const dateEl = e.target.closest("[data-date]");
+      if (dateEl) {
+        const photo = photos.find((p) => p.id === dateEl.dataset.date);
+        if (!photo) return;
+        const prevAt = photo.takenAt;
+        const prevApprox = photo.takenAtApprox;
+        const val = dateEl.value;
+        if (!val) {
+          photo.takenAt = null;
+          photo.takenAtApprox = false;
+        } else {
+          const parts = val.split("-").map(Number);
+          let h = 0, mi = 0, se = 0;
+          if (prevAt && !prevApprox) {
+            const old = new Date(prevAt);
+            if (!isNaN(old.getTime())) { h = old.getHours(); mi = old.getMinutes(); se = old.getSeconds(); }
+          }
+          photo.takenAt = new Date(parts[0], parts[1] - 1, parts[2], h, mi, se).getTime();
+          photo.takenAtApprox = false;
+        }
+        photo.takenAtSource = "manual";
+        sortPhotos();
+        idbPutPhoto(photo).then(() => renderPhotos()).catch((err) => {
+          console.warn(err);
+          photo.takenAt = prevAt;
+          photo.takenAtApprox = prevApprox;
+          renderPhotos();
+          toast("Could not save the date. Please try again.");
+        });
+        return;
+      }
+      const placeEl = e.target.closest("[data-place]");
+      if (placeEl) {
+        const photo = photos.find((p) => p.id === placeEl.dataset.place);
+        if (!photo) return;
+        const prevPlace = photo.place;
+        const prevSource = photo.placeSource;
+        photo.place = stripPlacePin(placeEl.value).slice(0, 80);
+        photo.placeSource = "manual";
+        idbPutPhoto(photo).then(() => renderPhotos()).catch((err) => {
+          console.warn(err);
+          photo.place = prevPlace;
+          photo.placeSource = prevSource;
+          renderPhotos();
+          toast("Could not save the place. Please try again.");
+        });
+      }
     });
 
     function openLightbox(id) {
@@ -1121,11 +1507,20 @@
       $("#lightbox-img").src = p.dataUrl;
       $("#lightbox-img").alt = p.caption || "Photo";
       $("#lightbox-cap").textContent = p.caption || "";
+      const bits = [];
+      const when = formatTakenDate(p.takenAt, p.takenAtApprox);
+      if (when) bits.push(when);
+      const where = placeDisplay(p);
+      if (where) bits.push("📍 " + where);
+      const metaEl = $("#lightbox-meta");
+      if (metaEl) metaEl.textContent = bits.join(" · ");
       $("#lightbox").classList.add("show");
     }
     function closeLightbox() {
       $("#lightbox").classList.remove("show");
       $("#lightbox-img").src = "";
+      const metaEl = $("#lightbox-meta");
+      if (metaEl) metaEl.textContent = "";
     }
     $("#lightbox-close").addEventListener("click", closeLightbox);
     $("#lightbox").addEventListener("click", (e) => {
@@ -1665,6 +2060,9 @@
       document.body.dataset.storageReady = "1";
       renderPhotos();
       renderTodayChrome();
+      photos.forEach((p) => {
+        if (typeof p.lat === "number" && typeof p.lon === "number" && !p.place) scheduleGeocode(p);
+      });
     }
 
     const storageReady = boot();
