@@ -4,9 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#C97B84" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%23FBF7F2%27/%3E%3Cpath fill=%27%23C97B84%27 d=%27M32 50 L14 32 A11 11 0 0 1 32 20 A11 11 0 0 1 50 32 Z%27/%3E%3C/svg%3E" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="M&amp;M Memory" />
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="180x180" href="apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
   <title>Moustapha, Maren &amp; Coco — Memory Vault</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -72,6 +76,24 @@
     .site-title { font-size: clamp(1.85rem, 6vw, 3rem); line-height: 1.15; color: var(--ink); }
     .site-sub { color: var(--ink-soft); margin-top: 6px; font-size: 0.98rem; }
     .header-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .icon-panel { width: min(1080px, calc(100% - 28px)); margin: 12px auto 0; display: none; text-align: left; }
+    .icon-panel.show { display: block; animation: fadeUp .35s ease; }
+    .icon-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+    .icon-preview {
+      width: 72px; height: 72px; border-radius: 16px; object-fit: cover;
+      box-shadow: var(--shadow-soft); background: var(--cream-deep); flex: none;
+    }
+    .icon-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .icon-pick-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+      gap: 8px; margin-top: 10px;
+    }
+    .icon-pick-grid button {
+      border: 0; padding: 0; border-radius: 10px; overflow: hidden;
+      aspect-ratio: 1; background: var(--cream-deep); box-shadow: var(--shadow-soft);
+    }
+    .icon-pick-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .icon-hint { font-size: 0.85rem; color: var(--ink-soft); margin-top: 8px; line-height: 1.45; }
     .btn {
       border: 0; background: var(--paper); color: var(--ink); border-radius: 999px;
       padding: 9px 16px; font-size: 0.88rem; font-weight: 600;
@@ -349,12 +371,29 @@
     <h1 class="site-title">Moustapha, Maren &amp; Coco 💕</h1>
     <p class="site-sub">A romantic memory vault &amp; digital scrapbook</p>
     <div class="header-actions">
+      <button class="btn btn-ghost btn-sm" type="button" id="btn-icon">App icon</button>
       <button class="btn btn-ghost btn-sm" type="button" id="btn-export">Export backup</button>
       <label class="btn btn-ghost btn-sm file-btn" for="import-file">Import backup
         <input id="import-file" type="file" accept="application/json,.json" />
       </label>
     </div>
   </header>
+  <div class="card icon-panel" id="icon-panel" hidden>
+    <h3 class="serif" style="font-size:1.3rem;">App icon</h3>
+    <p class="muted">Choose a picture for the Home Screen icon when you add this vault to your phone.</p>
+    <div class="icon-row">
+      <img class="icon-preview" id="icon-preview" src="apple-touch-icon.png" width="72" height="72" alt="App icon preview" />
+      <div class="icon-actions">
+        <button class="btn btn-sm btn-lavender" type="button" id="icon-from-gallery">Choose from photos</button>
+        <label class="btn btn-sm btn-ghost file-btn" for="icon-file">Upload a picture
+          <input id="icon-file" type="file" accept="image/*" />
+        </label>
+        <button class="btn btn-sm btn-ghost" type="button" id="icon-reset">Use default</button>
+      </div>
+    </div>
+    <div class="icon-pick-grid" id="icon-pick-grid" hidden></div>
+    <p class="icon-hint">Now tap Share → Add to Home Screen. Already added? Remove it and add again to update the icon.</p>
+  </div>
 
   <main>
     <section class="section active" id="sec-today" data-sec="today">
@@ -587,7 +626,11 @@
       places: "mv.places",
       music: "mv.music",
       notes: "mv.notes",
+      icon: "mv.icon",
     };
+
+    const DEFAULT_ICON_180 = "apple-touch-icon.png";
+    const DEFAULT_ICON_512 = "icon-512.png";
 
     const PEOPLE = [
       { id: "moustapha", name: "Moustapha", month: 1, day: 28, year: 1992, kind: "birthday" },
@@ -1992,6 +2035,95 @@
       toast("Note removed.");
     });
 
+
+    function getSavedIcon() {
+      const data = load(KEYS.icon, null);
+      if (data && data.icon180 && String(data.icon180).indexOf("data:image/") === 0) return data;
+      return null;
+    }
+
+    function applyAppIcons(data) {
+      document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="icon"]').forEach(function (el) { el.remove(); });
+      const url180 = (data && data.icon180) || DEFAULT_ICON_180;
+      const apple = document.createElement("link");
+      apple.rel = "apple-touch-icon";
+      apple.setAttribute("sizes", "180x180");
+      apple.href = url180;
+      document.head.appendChild(apple);
+      const fav = document.createElement("link");
+      fav.rel = "icon";
+      fav.type = "image/png";
+      fav.setAttribute("sizes", "180x180");
+      fav.href = url180;
+      document.head.appendChild(fav);
+      const prev = document.getElementById("icon-preview");
+      if (prev) prev.src = url180;
+    }
+
+    function applySavedAppIcon() {
+      applyAppIcons(getSavedIcon());
+    }
+
+    function loadIconImage(src) {
+      return new Promise(function (resolve, reject) {
+        const img = new Image();
+        img.onload = function () { resolve(img); };
+        img.onerror = function () { reject(new Error("Could not read that picture")); };
+        img.src = src;
+      });
+    }
+
+    function cropSquareToPng(img, size) {
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      const side = Math.min(w, h) || 1;
+      const sx = Math.max(0, Math.floor((w - side) / 2));
+      const sy = Math.max(0, Math.floor((h - side) / 2));
+      ctx.fillStyle = "#FBF7F2";
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      return canvas.toDataURL("image/png");
+    }
+
+    async function setAppIconFromSrc(src) {
+      const img = await loadIconImage(src);
+      const icon180 = cropSquareToPng(img, 180);
+      const icon512 = cropSquareToPng(img, 512);
+      let data = { icon180: icon180, icon512: icon512 };
+      if (!save(KEYS.icon, data)) {
+        data = { icon180: icon180 };
+        if (!save(KEYS.icon, data)) return false;
+      }
+      applyAppIcons(data);
+      toast("App icon saved. Add the page to your Home Screen again to use it.");
+      return true;
+    }
+
+    function resetAppIcon() {
+      try { localStorage.removeItem(KEYS.icon); } catch (e) {}
+      applyAppIcons(null);
+      toast("Default icon restored. Add the page to your Home Screen again to use it.");
+    }
+
+    function renderIconGalleryPick() {
+      const grid = $("#icon-pick-grid");
+      if (!photos.length) {
+        grid.hidden = true;
+        toast("Add a photo to the gallery first, or upload a picture here.");
+        return;
+      }
+      grid.hidden = false;
+      grid.innerHTML = photos.map(function (p) {
+        return '<button type="button" data-icon-photo="' + escapeHtml(p.id) + '" aria-label="Use this photo as the app icon">' +
+          '<img src="' + p.dataUrl + '" alt="" />' +
+          "</button>";
+      }).join("");
+    }
+
     function snapshot() {
       return {
         version: 1,
@@ -2003,8 +2135,45 @@
         places: places,
         music: music,
         notes: notes,
+        icon: getSavedIcon(),
       };
     }
+
+    $("#btn-icon").addEventListener("click", () => {
+      const panel = $("#icon-panel");
+      const willShow = panel.hidden;
+      panel.hidden = !willShow;
+      panel.classList.toggle("show", willShow);
+      if (willShow) {
+        $("#icon-pick-grid").hidden = true;
+        applySavedAppIcon();
+      }
+    });
+    $("#icon-from-gallery").addEventListener("click", renderIconGalleryPick);
+    $("#icon-file").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      setAppIconFromSrc(url).catch((err) => {
+        console.warn(err);
+        toast("Could not use that picture. Try another one.");
+      }).finally(() => URL.revokeObjectURL(url));
+    });
+    $("#icon-reset").addEventListener("click", () => {
+      resetAppIcon();
+      $("#icon-pick-grid").hidden = true;
+    });
+    $("#icon-pick-grid").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-icon-photo]");
+      if (!btn) return;
+      const photo = photos.find((p) => p.id === btn.dataset.iconPhoto);
+      if (!photo || !photo.dataUrl) return;
+      setAppIconFromSrc(photo.dataUrl).catch((err) => {
+        console.warn(err);
+        toast("Could not use that photo. Try another one.");
+      });
+    });
 
     $("#btn-export").addEventListener("click", async () => {
       try { await storageReady; } catch (e) {}
@@ -2060,6 +2229,11 @@
             save(KEYS.places, places) &&
             save(KEYS.music, music) &&
             save(KEYS.notes, notes);
+          if (data.icon && data.icon.icon180) {
+            if (save(KEYS.icon, { icon180: data.icon.icon180, icon512: data.icon.icon512 || data.icon.icon180 })) {
+              applyAppIcons(getSavedIcon());
+            }
+          }
           resetPlaceForm();
           renderAll();
           if (!ok) {
@@ -2091,6 +2265,7 @@
     }
 
     async function boot() {
+      applySavedAppIcon();
       await requestPersistentStorage();
       renderAll();
       try {
